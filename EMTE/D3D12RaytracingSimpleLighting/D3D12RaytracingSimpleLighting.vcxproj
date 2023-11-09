@@ -67,12 +67,12 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)DirectX-Headers\include\directx;$(SolutionDir)DirectXTK12\Inc;..\;$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)ImGui;$(SolutionDir)ImGui\backends;$(SolutionDir)DirectX-Headers\include\directx;$(SolutionDir)DirectXTK12\Inc;..\;$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <CompileAsWinRT>false</CompileAsWinRT>
       <DisableSpecificWarnings>
       </DisableSpecificWarnings>
@@ -116,13 +116,13 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
-      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)DirectX-Headers\include\directx;$(SolutionDir)DirectXTK12\Inc;..\;$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)ImGui;$(SolutionDir)ImGui\backends;$(SolutionDir)DirectX-Headers\include\directx;$(SolutionDir)DirectXTK12\Inc;..\;$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <Link>
@@ -158,6 +158,14 @@
     </PreLinkEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\ImGui\backends\imgui_impl_dx12.h" />
+    <ClInclude Include="..\ImGui\backends\imgui_impl_win32.h" />
+    <ClInclude Include="..\ImGui\imconfig.h" />
+    <ClInclude Include="..\ImGui\imgui.h" />
+    <ClInclude Include="..\ImGui\imgui_internal.h" />
+    <ClInclude Include="..\ImGui\imstb_rectpack.h" />
+    <ClInclude Include="..\ImGui\imstb_textedit.h" />
+    <ClInclude Include="..\ImGui\imstb_truetype.h" />
     <ClInclude Include="DeviceResources.h" />
     <ClInclude Include="DirectXRaytracingHelper.h" />
     <ClInclude Include="HlslCompat.h" />
@@ -171,11 +179,18 @@
     <ClInclude Include="stdafx.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\ImGui\backends\imgui_impl_dx12.cpp" />
+    <ClCompile Include="..\ImGui\backends\imgui_impl_win32.cpp" />
+    <ClCompile Include="..\ImGui\imgui.cpp" />
+    <ClCompile Include="..\ImGui\imgui_demo.cpp" />
+    <ClCompile Include="..\ImGui\imgui_draw.cpp" />
+    <ClCompile Include="..\ImGui\imgui_tables.cpp" />
+    <ClCompile Include="..\ImGui\imgui_widgets.cpp" />
     <ClCompile Include="DeviceResources.cpp" />
     <ClCompile Include="Win32Application.cpp" />
     <ClCompile Include="D3D12RaytracingSimpleLighting.cpp" />
     <ClCompile Include="DXSample.cpp" />
-    <ClCompile Include="Main.cpp" />
+    <ClCompile Include="main.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>

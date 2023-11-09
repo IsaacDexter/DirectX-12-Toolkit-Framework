@@ -32,6 +32,7 @@ D3D12RaytracingSimpleLighting::D3D12RaytracingSimpleLighting(UINT width, UINT he
 
 void D3D12RaytracingSimpleLighting::OnInit()
 {
+
     m_deviceResources = std::make_unique<DeviceResources>(
         DXGI_FORMAT_R8G8B8A8_UNORM,
         DXGI_FORMAT_UNKNOWN,
