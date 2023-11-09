@@ -8,3 +8,6 @@
 [submodule "EMTE/DirectX-Headers"]
 	path = EMTE/DirectX-Headers
 	url = https://github.com/microsoft/DirectX-Headers.git
+[submodule "EMTE/DirectX-Graphics-Samples"]
+	path = EMTE/DirectX-Graphics-Samples
+	url = https://github.com/microsoft/DirectX-Graphics-Samples.git
