@@ -9,3 +9,5 @@ Euclidean Manifold Topology Engine, or EMTE, is a mini-engine consisting of intu
 [DirectXMath](https://github.com/Microsoft/DirectXMath) by [microsoft](https://github.com/microsoft), [MIT Lisence](https://github.com/git/git-scm.com/blob/main/MIT-LICENSE.txt)
 ## DirectX Headers
 [DirectX-Headers](https://github.com/microsoft/DirectX-Headers) by [microsoft](https://github.com/microsoft), [MIT Lisence](https://github.com/git/git-scm.com/blob/main/MIT-LICENSE.txt)
+## DirectX-Graphics-Samples
+[DirectX-Graphics-Samples](https://github.com/microsoft/DirectX-Graphics-Samples) by [microsoft](https://github.com/microsoft), [MIT Lisence](https://github.com/git/git-scm.com/blob/main/MIT-LICENSE.txt)
