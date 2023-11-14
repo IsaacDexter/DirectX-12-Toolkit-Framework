@@ -56,8 +56,8 @@
 * commands are not executed immediately like DX11's immediate context
 * commands are **deferred**, only ran on GPU after executed on a command queue
 ## Command queue
-* ```ID3D12CommandQueue::ExecuteCommandLists```
-* ```ID3D12CommandQueue::Signal```
+* `ID3D12CommandQueue::ExecuteCommandLists`
+* `ID3D12CommandQueue::Signal`
 ```
 method IsFenceComplete( _fenceValue )
     return fence->GetCompletedValue() >= _fenceValue
@@ -90,6 +90,32 @@ end method
 * **WaitForFenceValue**
     * stall CPU thread until fence value has been reached
 * **Signal**
-    * 
-
-
+    * append a fence value into the command queue
+    * when command queue reaches the value, the fence that appended it will have its completed value set
+    * call does not block calling thread, returns value to wait for before writable GPU resources can be reused
+* **Render**
+    * render a frame
+        * poulate command list with all draw/compute commands needed to render the scene
+        * execute this list with ExecuteCommandList, which won't block the calling thread
+        * doesn't wait for execution on GPU before returning to caller
+    * when that frame's previous fence value is reached, move to next frame
+    * `Present` will present the rendered result to the screen
+        * returns index of next back-buffer within swap-chain to render to
+        * `DXGI_SWAP_EFFECT_FLIP_DISCARD` flip model will prevent present from blocking the main thread
+        * this means the back-buffer from the previous frame cannot be reused until the image has been presented
+        * to prevent this from being overwritten before presentation, CPU thread must wait for the fence value of the previous frame to be reached
+            * `WaitForFenceValue` block's CPU thread until the specified fence value has been reached
+### Command queue types 
+* **Copy**
+    * used to issue commands to copy resources data between/on CPU & GPU
+* **Compute**
+    * can do everything a copy queue can do and issue compute/dispatch commands
+* **Direct**
+    * can do eveything copy and compute queues can do, and issue draw commands
+* allocate one fence object and track one fence value for each allocated command queue
+* ensure every command queue tracks its own fence object and fence value, and only signals its own fence object
+* a fence value should never be allowed to decrease - the max unsigned int would take 19.5 million years before overflow
+# DirectX 12 Device
+* used to create resources
+* not directly used for isuing draw or dispatch commands
+* memory context that tracks allocation in GPU memory
