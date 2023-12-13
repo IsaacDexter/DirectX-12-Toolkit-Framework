@@ -8,6 +8,7 @@
 extern void ExitGame() noexcept;
 
 using namespace DirectX;
+using namespace DirectX::SimpleMath;
 
 using Microsoft::WRL::ComPtr;
 
@@ -98,6 +99,9 @@ void Game::Render()
     // Show the new frame.
     PIXBeginEvent(m_deviceResources->GetCommandQueue(), PIX_COLOR_DEFAULT, L"Present");
     m_deviceResources->Present();
+    // Let manager know a frame's worth of video memory has been sent to the GPU
+    // This checks to release old frame data.
+    m_graphicsMemory->Commit(m_deviceResources->GetCommandQueue());
     PIXEndEvent(m_deviceResources->GetCommandQueue());
 }
 
@@ -197,6 +201,7 @@ void Game::CreateDeviceDependentResources()
     }
 
     // TODO: Initialize device dependent objects here (independent of window size).
+    m_graphicsMemory = std::make_unique<GraphicsMemory>(device);
     device;
 }
 
@@ -209,6 +214,7 @@ void Game::CreateWindowSizeDependentResources()
 void Game::OnDeviceLost()
 {
     // TODO: Add Direct3D resource cleanup here.
+    m_graphicsMemory.reset();
 }
 
 void Game::OnDeviceRestored()
