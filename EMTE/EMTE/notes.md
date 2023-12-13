@@ -10,13 +10,13 @@
 * compute per-vertex lighting
 * takes single vertex as input and outputs the clip-space position of that vertex
 ## Hull shader (optional)
-* determines how much an input control patch should be tesselated by the tesselation stage
+* determines how much an input control patch should be tessellated by the tessellation stage
 ## Tessellator
-* subdivides primitive into smaller primitives, according to tessellation factiors set in hull shader stage
+* subdivides primitive into smaller primitives, according to tessellation factors set in hull shader stage
 * *fixed function*
 ## Domain shader (optional)
 * computes final vertex attributes based on output control points from hull shader and interpolation coordinates from tessellator stage
-* input is a single output from the tesselator, outputs computed attributes of tessellated primitive
+* input is a single output from the tessellator, outputs computed attributes of tessellated primitive
 ## Geometry shader (optional)
 * takes a single geometric primitive as input, can discard, change the type of, or generate additional primitives
 ## Stream output (optional)
@@ -26,8 +26,8 @@
 ## Rasterizer
 * clips primitives into view frustum
 * perform front/back-face culling
-* interpolate per-vertex attributes accross faces of each primitive
-* passes these interpolated balues into pixel shader
+* interpolate per-vertex attributes across faces of each primitive
+* passes these interpolated values into pixel shader
 * *fixed-function*
 ## Pixel shader
 * takes interpolated per-vertex values from rasterizer
@@ -47,7 +47,7 @@
 * stores a single variable that indicates the last value used to **signal** the fence
 * create at least one fence for each command queue
 	* multiple command queues can wait on a fence to reach a specific value
-	* fence should only be signaled from a single command queue
+	* fence should only be signalled from a single command queue
 * application tracks a **fence value** used to signal the fence
 ## Command list
 * issues commands:
@@ -96,7 +96,7 @@ end method
     * call does not block calling thread, returns value to wait for before writable GPU resources can be reused
 * **Render**
     * render a frame
-        * poulate command list with all draw/compute commands needed to render the scene
+        * populate command list with all draw/compute commands needed to render the scene
         * execute this list with ExecuteCommandList, which won't block the calling thread
         * doesn't wait for execution on GPU before returning to caller
     * when that frame's previous fence value is reached, move to next frame
@@ -112,13 +112,13 @@ end method
 * **Compute**
     * can do everything a copy queue can do and issue compute/dispatch commands
 * **Direct**
-    * can do eveything copy and compute queues can do, and issue draw commands
+    * can do everything copy and compute queues can do, and issue draw commands
 * allocate one fence object and track one fence value for each allocated command queue
 * ensure every command queue tracks its own fence object and fence value, and only signals its own fence object
 * a fence value should never be allowed to decrease - the max unsigned int would take 19.5 million years before overflow
 # DirectX 12 Device
 * used to create resources
-* not directly used for isuing draw or dispatch commands
+* not directly used for issuing draw or dispatch commands
 * memory context that tracks allocation in GPU memory
 
 # [DirectXTK 12](https://github.com/microsoft/DirectXTK12/wiki/The-basic-game-loop)
@@ -134,10 +134,10 @@ end method
 * C++ lacks, uses pure virtual class
 * Interface names start with I by convention
 * graphics library provides objects that implement instances
-    * inherit from commmon base abstract parent
-* binary standard, langauge nuetral
-* never declare a bariable of derived type, use the inteface pointer
-    * maintains strict seperation between interface and implementation
+    * inherit from common base abstract parent
+* binary standard, language neutral
+* never declare a variable of derived type, use the interface pointer
+    * maintains strict separation between interface and implementation
     * can change derived classes without changing calling code
 ### COM library
 * initialize COM library with `HRESULT CoInitializeEx(LPVOID pvReserved, DWORD dwCoInit);`
@@ -145,7 +145,7 @@ end method
     * 2nd param specifies threading model used
 ___
 #### Apartment threading
-* each COM object acccessed from single thread
+* each COM object accessed from single thread
 * COM interface pointers *not* shared between multiple threads
     * thread has a **message loop**
         * hidden 
@@ -156,7 +156,7 @@ ___
 * not apartment
 
 ## Direct3D device
-* primary graphics **COM interface** for creating addtion Direct3D resource objects
+* primary graphics **COM interface** for creating addition Direct3D resource objects
 * each instance associate with specific GPU
 * thread-safe, same instance usable across multiple threads
 * **DXGI factory** must be used when creating device
@@ -178,7 +178,7 @@ ___
 * equivalent to DX11's immediate device context
 
 ### BUNDLE
-* equivalent to DX11's deffered device context
+* equivalent to DX11's deferred device context
 
 ### COMPUTE
 * cannot do drawing commands
@@ -195,7 +195,7 @@ ___
 * none are executed until **command list** is *closed* and submitted to **command queue**
 
 ### DIRECT
-* usually one
+* usually, one
 * supports all GPU operations
 
 ### COMPUTE
@@ -211,16 +211,16 @@ ___
 * used to signal Win32 event to indicate a frame has completed GPU rendering, and the CPU is free to release/reuse the resources
 
 ## Swap chain
-* inteface that manages multiple **back-buffers**
+* interface that manages multiple **back-buffers**
     * render target resources
     * one, the **front-buffer**, is displayed on out monitor 
     * the others are available for rendering the next frame
 * `Present` flips the buffers (**buffer rotation**) 
     * the next back-buffer is the new front-buffer
     * the old front-buffer is available for reuse
-* application must explictly deal with **buffer rotation**
-    * keep submitted **command-lists** alive until they're fully comsumed by GPU
-    * requires maintaining three arrays,one for each back-buffer
+* application must explicitly deal with **buffer rotation**
+    * keep submitted **command-lists** alive until they're fully consumed by GPU
+    * requires maintaining three arrays, one for each back-buffer
         * array of **command allocators**
         * array of last submitted **fence** values
         * array of **render target** resources
@@ -231,7 +231,7 @@ ___
 
 ## Depth Buffer
 * graphics resource
-* contains **z-buffer**
+* contains **Z-buffer**
     * used for **Hidden Surface Removal** (HSV)
 * can have space set aside for a **stencil buffer**
     * VERY relevant
