@@ -1,4 +1,5 @@
-# [DX12 Graphics Pipeline](https://www.3dgep.com/learning-directx-12-1/)
+# [DX12 Graphics](https://www.3dgep.com/learning-directx-12-1/)
+# Pipeline
 ## Input assembler stage
 * read primitive data from **vertex** & **index** buffers
 * assemble data into primitives (triangles)
@@ -119,3 +120,129 @@ end method
 * used to create resources
 * not directly used for isuing draw or dispatch commands
 * memory context that tracks allocation in GPU memory
+
+# [DirectXTK 12](https://github.com/microsoft/DirectXTK12/wiki/The-basic-game-loop)
+
+# Rendering setup
+
+## COM interface
+* Component Object Model interface
+* COM is a specification for creating reusable software components
+    * defines a set of methods an object can support
+    * doesn't dictate implementation
+    * abstract
+* C++ lacks, uses pure virtual class
+* Interface names start with I by convention
+* graphics library provides objects that implement instances
+    * inherit from commmon base abstract parent
+* binary standard, langauge nuetral
+* never declare a bariable of derived type, use the inteface pointer
+    * maintains strict seperation between interface and implementation
+    * can change derived classes without changing calling code
+### COM library
+* initialize COM library with `HRESULT CoInitializeEx(LPVOID pvReserved, DWORD dwCoInit);`
+    * 1st param must be `NULL`
+    * 2nd param specifies threading model used
+___
+#### Apartment threading
+* each COM object acccessed from single thread
+* COM interface pointers *not* shared between multiple threads
+    * thread has a **message loop**
+        * hidden 
+        * OS calls windows procedure for each window
+        * queue hidden, but can be accessed with `GetMessage(&msg, NULL, 0, 0);`
+            * blocking  
+#### Multithreaded
+* not apartment
+
+## Direct3D device
+* primary graphics **COM interface** for creating addtion Direct3D resource objects
+* each instance associate with specific GPU
+* thread-safe, same instance usable across multiple threads
+* **DXGI factory** must be used when creating device
+
+## DXGI factory
+* implements methods for generating DirectX Graphics Infrastructure
+    * DXGI manages low level tasks independent of the DirectX graphics runtime
+* Create by calling `CreateDXGIFactory`
+
+## Graphics command list
+* primary COM interface for drawing
+* maps/un-maps resources into memory for CPU access
+* *not* thread-safe
+    * ensure only one thread uses it at a time
+* associated with a **command allocator**
+    * manages command list memory allocations and lifetime
+
+### DIRECT
+* equivalent to DX11's immediate device context
+
+### BUNDLE
+* equivalent to DX11's deffered device context
+
+### COMPUTE
+* cannot do drawing commands
+* can only do dispatch and copy operations
+
+### COPY
+* cannot do drawing commands
+* can only do copy operations
+
+## Command queue
+* First-In, First-Out (FIFO)
+* queue of command-lists submitted to GPU for processing
+* records all calls to it
+* none are executed until **command list** is *closed* and submitted to **command queue**
+
+### DIRECT
+* usually one
+* supports all GPU operations
+
+### COMPUTE
+* optionally multiple
+* for asynchronous compute work
+
+### COPY
+* optionally multiple
+* for background **direct memory access** work between GPU/CPU
+
+## Fence
+* needed for GPU to signal to the application that it has completed processing a submitted **command-list**
+* used to signal Win32 event to indicate a frame has completed GPU rendering, and the CPU is free to release/reuse the resources
+
+## Swap chain
+* inteface that manages multiple **back-buffers**
+    * render target resources
+    * one, the **front-buffer**, is displayed on out monitor 
+    * the others are available for rendering the next frame
+* `Present` flips the buffers (**buffer rotation**) 
+    * the next back-buffer is the new front-buffer
+    * the old front-buffer is available for reuse
+* application must explictly deal with **buffer rotation**
+    * keep submitted **command-lists** alive until they're fully comsumed by GPU
+    * requires maintaining three arrays,one for each back-buffer
+        * array of **command allocators**
+        * array of last submitted **fence** values
+        * array of **render target** resources
+
+## Render target
+* graphics resource
+* holds a screen's worth of drawn pixels
+
+## Depth Buffer
+* graphics resource
+* contains **z-buffer**
+    * used for **Hidden Surface Removal** (HSV)
+* can have space set aside for a **stencil buffer**
+    * VERY relevant
+
+## Descriptor heap
+* contains descriptors
+
+### Render target view descriptor
+* provides Direct3D the properties of the **render target**
+    * the surface graphics output is written on
+
+### Depth/stencil view descriptor
+* provides Direct3D the properties of the depth/stencil resource
+
