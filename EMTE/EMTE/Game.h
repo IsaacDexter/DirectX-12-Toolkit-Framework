@@ -60,4 +60,10 @@ private:
 
     // Rendering loop timer.
     DX::StepTimer                           m_timer;
+    /// <summary>
+    /// <para>Manages video memory  allocations</para>
+    /// <para>Call commit after presenting buffers to track and free memory</para>
+    /// <para>Ensure initialization when creating resources</para>
+    /// </summary>
+    std::unique_ptr<DirectX::GraphicsMemory> m_graphicsMemory;
 };
