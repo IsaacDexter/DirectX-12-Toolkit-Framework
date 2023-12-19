@@ -211,6 +211,7 @@
     <CopyFileToFolders Include="StoreLogo.png" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="textures\cat.png" />
     <Image Include="xbox.ico" />
   </ItemGroup>
   <ItemGroup>

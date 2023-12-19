@@ -72,4 +72,15 @@ private:
     /// <para>Ensure initialization when creating resources</para>
     /// </summary>
     std::unique_ptr<DirectX::GraphicsMemory> m_graphicsMemory;
+
+    /// <summary>Stores and allocates objects needed by shaders</summary>
+    std::unique_ptr<DirectX::DescriptorHeap> m_resourceDescriptors;
+    Microsoft::WRL::ComPtr<ID3D12Resource> m_texture;
+
+    enum Descriptors
+    {
+        Cat,
+        Count
+
+    };
 };

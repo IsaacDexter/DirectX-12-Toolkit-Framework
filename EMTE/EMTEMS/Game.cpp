@@ -261,7 +261,42 @@ void Game::CreateDeviceDependentResources()
     // TODO: Initialize device dependent objects here (independent of window size).
     m_graphicsMemory = std::make_unique<GraphicsMemory>(device);
 
+
+    //Initialize ImGui
     InitGui();
+
+
+
+    // Load Texture
+    // Make resource descriptor heap
+    m_resourceDescriptors = std::make_unique<DescriptorHeap>(device, Descriptors::Count);
+
+    // Initialize helper class for uploading textures to GPU
+    ResourceUploadBatch resourceUpload(device);
+    resourceUpload.Begin();
+
+    // Load 2D texture using Windows Imaging Component (WIC)
+    DX::ThrowIfFailed(CreateWICTextureFromFile(
+        device, 
+        resourceUpload, // ResourceUploadBatch to upload texture to GPU
+        L"textures/cat.png", // Path of the texture to load
+        m_texture.ReleaseAndGetAddressOf()  // Release the interface associated with comptr and retreieve a pointer to the released interface to store the texture into
+    )); 
+
+    // Create a shader resource view, which describes the properties of a texture
+    CreateShaderResourceView(
+        device,
+        m_texture.Get(),    // Pointer to resource object that represents the Shader Resource
+        m_resourceDescriptors->GetCpuHandle(Descriptors::Cat)   // Descriptor handle that represents the SRV 
+    );
+
+    //Create a future allowing the upload process to potentially happen on another thread, and wait for the upload to comlete before continuing
+    auto uploadResourcesFinished = resourceUpload.End(
+        m_deviceResources->GetCommandQueue()
+    );
+    uploadResourcesFinished.wait();
+
+
 
     device;
 }
@@ -276,6 +311,8 @@ void Game::OnDeviceLost()
 {
     // TODO: Add Direct3D resource cleanup here.
     m_graphicsMemory.reset();
+    m_texture.Reset();
+    m_resourceDescriptors.reset();
 }
 
 void Game::OnDeviceRestored()

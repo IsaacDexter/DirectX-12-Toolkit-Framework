@@ -14,6 +14,9 @@
     <Filter Include="ImGui\backends">
       <UniqueIdentifier>{072745e2-d873-4f51-bfc3-fcfb8cd7d615}</UniqueIdentifier>
     </Filter>
+    <Filter Include="textures">
+      <UniqueIdentifier>{8814df5f-9feb-4f2d-bbe9-e94c45cae1c2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -86,6 +89,9 @@
   <ItemGroup>
     <Image Include="xbox.ico">
       <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="textures\cat.png">
+      <Filter>textures</Filter>
     </Image>
   </ItemGroup>
   <ItemGroup>

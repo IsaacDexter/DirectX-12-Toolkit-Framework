@@ -279,9 +279,47 @@ ___
 * descriptor heaps store these object types and encompass memory allocation for them
 * they do this for as large a window as possible, ideally an entire frame or more
 
-if an application rapidly switches textures from the api that the pipeline sees,
-the descriptor needsspace to define descriptor tables on the fly for every set of state needed
+* if an application rapidly switches textures from the api that the pipeline sees, the descriptor needs space to define descriptor tables on the fly for every set of state needed
 
 * required by DX12 to mirror GPU hardware
 * there is no option to put descriptors in memory, so they must be stored in descriptor heaps
 * they are accessible, and can be edited by the CPU, but cannot be edited by the GPU
+
+## Committed resource
+* texture containing bitmap image pixel data for sprite rendering
+
+## Shader Resource View Descriptor (SRV)
+* created in a **Resource descriptor heap**
+* describes the properties of a texture resource
+
+## Sampler
+* describes how the GPU should handle reading the texture data for rendering
+    * image filtering
+    * tiling
+    * etc.
+* **Static sampler** defined in root signature
+* **Heap sampler** defined in **Sampler descriptor heap**
+
+## `SpriteBatch`
+* handles additional D3D objects required for drawing
+    * **Vertex buffer**
+    * **Index buffer**
+    * **Pipeline state object**
+    * **Root signature**
+
+## [`ResourceUploadBatch`](https://github.com/microsoft/DirectXTK12/wiki/ResourceUploadBatch)
+* handles additional D3D objects required for uploading texture data
+    * **Upload heap committed resource**
+    * **Fence**
+    * **Command allocator**
+    * **Command list**
+* provides helper for uploading resources to GPU memory
+    * textures
+* handles automatic generation of mipmaps using shaders on the GPU
+
+## `GraphicsMemory`
+* manages in flight memory related to:
+    * **Constant buffer views**
+    * **Dynamic vertex buffers**
+
+
