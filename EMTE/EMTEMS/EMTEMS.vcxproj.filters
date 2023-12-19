@@ -99,6 +99,12 @@
     <Image Include="textures\sunset.jpg">
       <Filter>textures</Filter>
     </Image>
+    <Image Include="textures\rocks.jpg">
+      <Filter>textures</Filter>
+    </Image>
+    <Image Include="textures\rocks_normalmap.dds">
+      <Filter>textures</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <Manifest Include="settings.manifest">

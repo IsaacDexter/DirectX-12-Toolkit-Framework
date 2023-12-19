@@ -76,8 +76,19 @@ void Game::Update(DX::StepTimer const& timer)
 
     float time = float(m_timer.GetTotalSeconds());
     // TODO: Add your game logic here.
-    m_rotation = cosf(time) * 4.f;
-    m_scale = cosf(time) + 2.f;
+
+
+    //Rotate the light based on elapsed time
+    float yaw = time * 0.4f;
+    float pitch = time * 0.7f;
+    float roll = time * 1.1f;
+    auto quat = Quaternion::CreateFromYawPitchRoll(pitch, roll, yaw);
+
+    auto light = XMVector3Rotate(g_XMOne, quat);
+
+    m_effect->SetLightDirection(0, light);
+
+
     elapsedTime;
 
     PIXEndEvent();
@@ -109,33 +120,56 @@ void Game::Render()
         , m_states->Heap()};  //Use specific sampler state
     commandList->SetDescriptorHeaps(static_cast<UINT>(std::size(heaps)), heaps);
 
-    // Begin the batch of sprite drawing operations
-    m_spriteBatch->Begin(commandList);
-
-
-    // Draw background texture
-    m_spriteBatch->Draw(
-        m_resourceDescriptors->GetGpuHandle(Descriptors::Background),
-        GetTextureSize(m_background.Get()),
-        m_fullscreenRect
-    );
-
-    // Submit the work of drawing a texture to the command list
-    m_spriteBatch->Draw(
-        m_resourceDescriptors->GetGpuHandle(Descriptors::Cat),
-        GetTextureSize(m_texture.Get()),
-        m_screenPos, nullptr, Colors::White, 0.f, m_origin  //Screen position, source rect, tint, rotation, origin
-    ); 
-
-
-
-    // End the batch of sprite drawing operations
-    m_spriteBatch->End();
-    
 
 
     RenderGui();
+
+    // Render sprites
+    {
+        // Begin the batch of sprite drawing operations
+        m_spriteBatch->Begin(commandList);
+
+
+        // Draw background texture
+        m_spriteBatch->Draw(
+            m_resourceDescriptors->GetGpuHandle(Descriptors::Background),
+            GetTextureSize(m_background.Get()),
+            m_fullscreenRect
+        );
+
+        // Submit the work of drawing a texture to the command list
+        m_spriteBatch->Draw(
+            m_resourceDescriptors->GetGpuHandle(Descriptors::Cat),
+            GetTextureSize(m_cat.Get()),
+            Vector2(50.f, 50.f), nullptr, Colors::White, 0.f  //Screen position, source rect, tint, rotation, origin
+        );
+
+
+
+        // End the batch of sprite drawing operations
+        m_spriteBatch->End();
+    }
+
+    // Render primitives
+    {
+        // apply the basic effect
+        m_effect->Apply(commandList);
+
+        // Start batch of primitive drawing operations
+        m_batch->Begin(commandList);
+
+        VertexType v1(Vector3(  400.f,  150.f,  0.f ), -Vector3::UnitZ, Vector2(0.5f,   0.f ));
+        VertexType v2(Vector3(  600.f,  450.f,  0.f ), -Vector3::UnitZ, Vector2(1.f,    1.f ));
+        VertexType v3(Vector3(  200.f,  450.f,  0.f ), -Vector3::UnitZ, Vector2(0.f,    1.f ));
+
+        m_batch->DrawTriangle(v1, v2, v3);
+
+        // Cease this batch of primitive drawing operations
+        m_batch->End();
+    }
+
     
+
     PIXEndEvent(commandList);
 
     // Show the new frame.
@@ -300,43 +334,6 @@ void Game::CreateDeviceDependentResources()
     //Initialize ImGui
     InitGui();
 
-
-
-    // Load Texture
-    // Make resource descriptor heap
-    m_resourceDescriptors = std::make_unique<DescriptorHeap>(device, Descriptors::Count);
-
-    // Initialize helper class for uploading textures to GPU
-    ResourceUploadBatch resourceUpload(device);
-    resourceUpload.Begin();
-
-    // Load 2D dds texture, use CreateWICTextureFromFile for pngs
-    DX::ThrowIfFailed(CreateDDSTextureFromFile(
-        device, 
-        resourceUpload, // ResourceUploadBatch to upload texture to GPU
-        L"textures/cat.dds", // Path of the texture to load
-        m_texture.ReleaseAndGetAddressOf()  // Release the interface associated with comptr and retreieve a pointer to the released interface to store the texture into
-    )); 
-    // Create a shader resource view, which describes the properties of a texture
-    CreateShaderResourceView(
-        device,
-        m_texture.Get(),    // Pointer to resource object that represents the Shader Resource
-        m_resourceDescriptors->GetCpuHandle(Descriptors::Cat)   // Descriptor handle that represents the SRV 
-    );
-
-    // Load background texture
-    DX::ThrowIfFailed(CreateWICTextureFromFile(
-        device, 
-        resourceUpload, // ResourceUploadBatch to upload texture to GPU
-        L"textures/sunset.jpg", // Path of the texture to load
-        m_background.ReleaseAndGetAddressOf()  // Release the interface associated with comptr and retreieve a pointer to the released interface to store the texture into
-    )); 
-    CreateShaderResourceView(
-        device,
-        m_background.Get(),    // Pointer to resource object that represents the Shader Resource
-        m_resourceDescriptors->GetCpuHandle(Descriptors::Background)   // Descriptor handle that represents the SRV 
-    );
-
     ///<summary>wraps information concerning render target used by DX12 when creating Pipeline State Objects</summary>
     RenderTargetState rtState(
         m_deviceResources->GetBackBufferFormat(),
@@ -345,26 +342,113 @@ void Game::CreateDeviceDependentResources()
 
     // Create a common states object which provides a descriptor heap with pre-defined sampler descriptors
     m_states = std::make_unique<CommonStates>(device);
-    auto sampler = m_states->LinearWrap();
 
-    ///<summary>state description used when creating PSO used in the sprite batch</summary>
-    SpriteBatchPipelineStateDescription pd(rtState
-        //);    // Use default 
-        , nullptr, nullptr, nullptr, &sampler); // use specific sampler
+    //Set up sprite batch
+    {
+        // Load Texture
+        // Make resource descriptor heap
+        m_resourceDescriptors = std::make_unique<DescriptorHeap>(device, Descriptors::Count);
+
+        // Initialize helper class for uploading textures to GPU
+        ResourceUploadBatch resourceUpload(device);
+        resourceUpload.Begin();
+
+        // Load 2D dds texture, use CreateWICTextureFromFile for pngs
+        DX::ThrowIfFailed(CreateDDSTextureFromFile(
+            device,
+            resourceUpload, // ResourceUploadBatch to upload texture to GPU
+            L"textures/cat.dds", // Path of the texture to load
+            m_cat.ReleaseAndGetAddressOf()  // Release the interface associated with comptr and retreieve a pointer to the released interface to store the texture into
+        ));
+        // Create a shader resource view, which describes the properties of a texture
+        CreateShaderResourceView(
+            device,
+            m_cat.Get(),    // Pointer to resource object that represents the Shader Resource
+            m_resourceDescriptors->GetCpuHandle(Descriptors::Cat)   // Descriptor handle that represents the SRV 
+        );
+
+        // Load background texture
+        DX::ThrowIfFailed(CreateWICTextureFromFile(
+            device,
+            resourceUpload, // ResourceUploadBatch to upload texture to GPU
+            L"textures/sunset.jpg", // Path of the texture to load
+            m_background.ReleaseAndGetAddressOf()  // Release the interface associated with comptr and retreieve a pointer to the released interface to store the texture into
+        ));
+        CreateShaderResourceView(
+            device,
+            m_background.Get(),    // Pointer to resource object that represents the Shader Resource
+            m_resourceDescriptors->GetCpuHandle(Descriptors::Background)   // Descriptor handle that represents the SRV 
+        ); 
+        
+        // Load rocks texture
+        DX::ThrowIfFailed(CreateDDSTextureFromFile(
+            device,
+            resourceUpload, // ResourceUploadBatch to upload texture to GPU
+            L"textures/rocks_diff.dds", // Path of the texture to load
+            m_rocks_diff.ReleaseAndGetAddressOf()  // Release the interface associated with comptr and retreieve a pointer to the released interface to store the texture into
+        ));
+        CreateShaderResourceView(
+            device,
+            m_rocks_diff.Get(),    // Pointer to resource object that represents the Shader Resource
+            m_resourceDescriptors->GetCpuHandle(Descriptors::Rocks_diff)   // Descriptor handle that represents the SRV 
+        );
+        DX::ThrowIfFailed(CreateDDSTextureFromFile(
+            device,
+            resourceUpload, // ResourceUploadBatch to upload texture to GPU
+            L"textures/rocks_norm.dds", // Path of the texture to load
+            m_rocks_norm.ReleaseAndGetAddressOf()  // Release the interface associated with comptr and retreieve a pointer to the released interface to store the texture into
+        ));
+        CreateShaderResourceView(
+            device,
+            m_rocks_norm.Get(),    // Pointer to resource object that represents the Shader Resource
+            m_resourceDescriptors->GetCpuHandle(Descriptors::Rocks_norm)   // Descriptor handle that represents the SRV 
+        );
+
+        auto sampler = m_states->LinearWrap();
+
+        ///<summary>state description used when creating PSO used in the sprite batch</summary>
+        SpriteBatchPipelineStateDescription pd(rtState
+            //);    // Use default 
+            , nullptr, nullptr, nullptr, &sampler); // use specific sampler
         //,&CommonStates::NonPremultiplied);   // Prevent use of premultiplied alpha, for textures without that
-    m_spriteBatch = std::make_unique<SpriteBatch>(device, resourceUpload, pd);
+        m_spriteBatch = std::make_unique<SpriteBatch>(device, resourceUpload, pd);
 
-    // set position of sprite
-    XMUINT2 catSize = GetTextureSize(m_texture.Get());
-    m_origin.x = float(catSize.x / 2);
-    m_origin.y = float(catSize.y / 2);
+        // set position of sprite
+        XMUINT2 catSize = GetTextureSize(m_cat.Get());
+        m_origin.x = float(catSize.x / 2);
+        m_origin.y = float(catSize.y / 2);
 
 
-    //Create a future allowing the upload process to potentially happen on another thread, and wait for the upload to comlete before continuing
-    auto uploadResourcesFinished = resourceUpload.End(
-        m_deviceResources->GetCommandQueue()
-    );
-    uploadResourcesFinished.wait();
+        //Create a future allowing the upload process to potentially happen on another thread, and wait for the upload to comlete before continuing
+        auto uploadResourcesFinished = resourceUpload.End(
+            m_deviceResources->GetCommandQueue()
+        );
+        uploadResourcesFinished.wait();
+    }
+
+    //Set up primitive batch
+    {
+        m_batch = std::make_unique<PrimitiveBatch<VertexType>>(device);
+
+        // create the pipeline description for the BasicEffect object
+        EffectPipelineStateDescription pd(
+            &VertexType::InputLayout,
+            CommonStates::Opaque,
+            CommonStates::DepthDefault,
+            CommonStates::CullCounterClockwise, //Define CCW winding order
+            rtState
+        );
+
+        // create the basiceffect to use the pipeline description and colored vertices
+        m_effect = std::make_unique<NormalMapEffect>(device, EffectFlags::None, pd);
+        // Set the texture descriptors for this effect
+        m_effect->SetTexture(m_resourceDescriptors->GetGpuHandle(Descriptors::Rocks_diff), m_states->LinearClamp());
+        m_effect->SetNormalTexture(m_resourceDescriptors->GetGpuHandle(Descriptors::Rocks_norm));
+
+        // Enable built in, dot product lighting
+        m_effect->EnableDefaultLighting();
+        m_effect->SetLightDiffuseColor(0, Colors::Gray);
+    }
 
 
 
@@ -380,8 +464,19 @@ void Game::CreateWindowSizeDependentResources()
     m_spriteBatch->SetViewport(viewport);
 
     auto size = m_deviceResources->GetOutputSize();
-    m_screenPos.x = float(size.right) / 2.f;
-    m_screenPos.y = float(size.bottom) / 2.f;
+
+    // Create matrix to allow for primitive batch to be rendered with a pixel coordinate system
+    // - Shifts the 0,0 origin to the upper right corner
+    // - shifts the y axis so is at the top of the screen
+    // - scales the size in pixels to take up the entire -1 to 1 range
+    Matrix proj = 
+        Matrix::CreateScale(
+            2.f / float(size.right),
+            -2.f / float(size.bottom), 
+            1.f
+        ) * Matrix::CreateTranslation(-1.f, 1.f, 0.f);
+
+    m_effect->SetProjection(proj);
 
     m_fullscreenRect = m_deviceResources->GetOutputSize();
 }
@@ -390,11 +485,15 @@ void Game::OnDeviceLost()
 {
     // TODO: Add Direct3D resource cleanup here.
     m_graphicsMemory.reset();
-    m_texture.Reset();
+    m_cat.Reset();
     m_background.Reset();
+    m_rocks_diff.Reset();
+    m_rocks_norm.Reset();
     m_resourceDescriptors.reset();
     m_spriteBatch.reset();
     m_states.reset();
+    m_effect.reset();
+    m_batch.reset();
 }
 
 void Game::OnDeviceRestored()

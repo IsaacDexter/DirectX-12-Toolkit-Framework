@@ -334,3 +334,40 @@ ___
 * used to draw sprites
 * sets its own PSO
 * asynchronous creation
+
+___
+# Rendering
+
+## Vertex buffer
+* contains the vertices of elements to be drawn
+
+## Root signature
+* defines how CPU and GPU shader programs share data
+
+## Pipeline state object
+* defines all state
+* defines vertex input layout
+* defines compiled shader programs
+
+## Primitive topology
+* setting
+* indicates how individual vertices are interpreted
+    * triangle
+    * line
+    * point
+
+## `BasicEffect`
+* provides rendering objects
+    * **root signature**
+    * **pipelins state object**
+
+## [`VertexPositionColor`](https://github.com/microsoft/DirectXTK12/wiki/VertexTypes)
+* provides input layout for vertex
+* other vertex types can store normals and texture
+
+## `PrimitiveBatch`
+* provides **vertex buffer**
+* provides **primitive topology**
+* used for drawing multiple vertices in a batch
+
+
