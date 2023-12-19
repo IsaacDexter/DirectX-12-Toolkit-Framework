@@ -81,6 +81,10 @@ private:
     {
         Cat,
         Count
-
     };
+
+    /// <summary>Helper that handles additional D3D resources required for drawing</summary>
+    std::unique_ptr<DirectX::SpriteBatch> m_spriteBatch;
+    DirectX::SimpleMath::Vector2 m_screenPos;
+    DirectX::SimpleMath::Vector2 m_origin;
 };

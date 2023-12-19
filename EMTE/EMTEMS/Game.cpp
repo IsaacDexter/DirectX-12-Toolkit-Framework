@@ -99,6 +99,27 @@ void Game::Render()
     PIXBeginEvent(commandList, PIX_COLOR_DEFAULT, L"Render");
 
     // TODO: Add your rendering code here.
+    
+    
+    
+    // Set descriptor heaps in the command list
+    ID3D12DescriptorHeap* heaps[] = { m_resourceDescriptors->Heap() };
+    commandList->SetDescriptorHeaps(static_cast<UINT>(std::size(heaps)), heaps);
+
+    // Begin the batch of sprite drawing operations
+    m_spriteBatch->Begin(commandList);
+
+    // Submit the work of drawing a texture to the command list
+    m_spriteBatch->Draw(
+        m_resourceDescriptors->GetGpuHandle(Descriptors::Cat),
+        GetTextureSize(m_texture.Get()),
+        m_screenPos, nullptr, Colors::White, 0.f, m_origin); //Screen position, source rect, tint, rotation, origin
+
+    // End the batch of sprite drawing operations
+    m_spriteBatch->End();
+    
+
+
     RenderGui();
     
     PIXEndEvent(commandList);
@@ -290,6 +311,21 @@ void Game::CreateDeviceDependentResources()
         m_resourceDescriptors->GetCpuHandle(Descriptors::Cat)   // Descriptor handle that represents the SRV 
     );
 
+    ///<summary>wraps information concerning render target used by DX12 when creating Pipeline State Objects</summary>
+    RenderTargetState rtState(
+        m_deviceResources->GetBackBufferFormat(),
+        m_deviceResources->GetDepthBufferFormat()
+    );
+
+    ///<summary>state description used when creating PSO used in the sprite batch</summary>
+    SpriteBatchPipelineStateDescription pd(rtState);
+    m_spriteBatch = std::make_unique<SpriteBatch>(device, resourceUpload, pd);
+
+    // set position of sprite
+    XMUINT2 catSize = GetTextureSize(m_texture.Get());
+    m_origin.x = float(catSize.x / 2);
+    m_origin.y = float(catSize.y / 2);
+
     //Create a future allowing the upload process to potentially happen on another thread, and wait for the upload to comlete before continuing
     auto uploadResourcesFinished = resourceUpload.End(
         m_deviceResources->GetCommandQueue()
@@ -305,6 +341,13 @@ void Game::CreateDeviceDependentResources()
 void Game::CreateWindowSizeDependentResources()
 {
     // TODO: Initialize windows-size dependent objects here.
+    // Get screen coordinates
+    auto viewport = m_deviceResources->GetScreenViewport();
+    m_spriteBatch->SetViewport(viewport);
+
+    auto size = m_deviceResources->GetOutputSize();
+    m_screenPos.x = float(size.right) / 2.f;
+    m_screenPos.y = float(size.bottom) / 2.f;
 }
 
 void Game::OnDeviceLost()
@@ -313,6 +356,7 @@ void Game::OnDeviceLost()
     m_graphicsMemory.reset();
     m_texture.Reset();
     m_resourceDescriptors.reset();
+    m_spriteBatch.reset();
 }
 
 void Game::OnDeviceRestored()

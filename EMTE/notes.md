@@ -322,4 +322,15 @@ ___
     * **Constant buffer views**
     * **Dynamic vertex buffers**
 
+## `RenderTargetState`
+* helper structure
+* wraps information used by DX12 when creating **Pipeline State objects**
+    * **render target** format
+    * **depth/stencil buffer** format
+    * number of **render targets**
+* used by `Effects` and `SpriteBatch`
 
+## [`SpriteBatch`](https://github.com/microsoft/DirectXTK12/wiki/SpriteBatch)
+* used to draw sprites
+* sets its own PSO
+* asynchronous creation
