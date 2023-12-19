@@ -76,8 +76,6 @@ void Game::Update(DX::StepTimer const& timer)
 
     float time = float(m_timer.GetTotalSeconds());
     // TODO: Add your game logic here.
-    m_rotation = cosf(time) * 4.f;
-    m_scale = cosf(time) + 2.f;
     elapsedTime;
 
     PIXEndEvent();
@@ -128,7 +126,7 @@ void Game::Render()
         m_spriteBatch->Draw(
             m_resourceDescriptors->GetGpuHandle(Descriptors::Cat),
             GetTextureSize(m_texture.Get()),
-            m_screenPos, nullptr, Colors::White, 0.f, m_origin  //Screen position, source rect, tint, rotation, origin
+            Vector2(50.f, 50.f), nullptr, Colors::White, 0.f  //Screen position, source rect, tint, rotation, origin
         );
 
 
@@ -136,7 +134,6 @@ void Game::Render()
         // End the batch of sprite drawing operations
         m_spriteBatch->End();
     }
-
     // Render primitives
     {
         // apply the basic effect
@@ -145,9 +142,9 @@ void Game::Render()
         // Start batch of primitive drawing operations
         m_batch->Begin(commandList);
 
-        VertexType v1(Vector3(  0.0f,   0.5f,   0.5f), Colors::OliveDrab);
-        VertexType v2(Vector3(  0.5f,   -0.5f,  0.5f), Colors::Orchid);
-        VertexType v3(Vector3(  -0.5f,  -0.5f,  0.5f), Colors::Navy);
+        VertexType v1(Vector3(  400.f,   150.f,   0.f), Colors::OliveDrab);
+        VertexType v2(Vector3(  600.f,   450.f,  0.f), Colors::Orchid);
+        VertexType v3(Vector3(  200.f,  450.f,  0.f), Colors::Navy);
 
         m_batch->DrawTriangle(v1, v2, v3);
 
@@ -417,8 +414,19 @@ void Game::CreateWindowSizeDependentResources()
     m_spriteBatch->SetViewport(viewport);
 
     auto size = m_deviceResources->GetOutputSize();
-    m_screenPos.x = float(size.right) / 4.f;
-    m_screenPos.y = float(size.bottom) / 4.f;
+
+    // Create matrix to allow for primitive batch to be rendered with a pixel coordinate system
+    // - Shifts the 0,0 origin to the upper right corner
+    // - shifts the y axis so is at the top of the screen
+    // - scales the size in pixels to take up the entire -1 to 1 range
+    Matrix proj = 
+        Matrix::CreateScale(
+            2.f / float(size.right),
+            -2.f / float(size.bottom), 
+            1.f
+        ) * Matrix::CreateTranslation(-1.f, 1.f, 0.f);
+
+    m_effect->SetProjection(proj);
 
     m_fullscreenRect = m_deviceResources->GetOutputSize();
 }

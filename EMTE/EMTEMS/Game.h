@@ -88,9 +88,7 @@ private:
 
     /// <summary>Helper that handles additional D3D resources required for drawing</summary>
     std::unique_ptr<DirectX::SpriteBatch> m_spriteBatch;
-    DirectX::SimpleMath::Vector2 m_screenPos;
-    float m_rotation;
-    float m_scale;
+
     DirectX::SimpleMath::Vector2 m_origin;
 
     std::unique_ptr<DirectX::CommonStates> m_states;
