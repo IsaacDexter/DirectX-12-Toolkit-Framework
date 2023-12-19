@@ -74,7 +74,10 @@ void Game::Update(DX::StepTimer const& timer)
 
     float elapsedTime = float(timer.GetElapsedSeconds());
 
+    float time = float(m_timer.GetTotalSeconds());
     // TODO: Add your game logic here.
+    m_rotation = cosf(time) * 4.f;
+    m_scale = cosf(time) + 2.f;
     elapsedTime;
 
     PIXEndEvent();
@@ -100,10 +103,10 @@ void Game::Render()
 
     // TODO: Add your rendering code here.
     
-    
-    
     // Set descriptor heaps in the command list
-    ID3D12DescriptorHeap* heaps[] = { m_resourceDescriptors->Heap() };
+    ID3D12DescriptorHeap* heaps[] = { m_resourceDescriptors->Heap()
+        //};
+        , m_states->Heap()};  //Use specific sampler state
     commandList->SetDescriptorHeaps(static_cast<UINT>(std::size(heaps)), heaps);
 
     // Begin the batch of sprite drawing operations
@@ -317,8 +320,14 @@ void Game::CreateDeviceDependentResources()
         m_deviceResources->GetDepthBufferFormat()
     );
 
+    // Create a common states object which provides a descriptor heap with pre-defined sampler descriptors
+    m_states = std::make_unique<CommonStates>(device);
+    auto sampler = m_states->LinearWrap();
+
     ///<summary>state description used when creating PSO used in the sprite batch</summary>
-    SpriteBatchPipelineStateDescription pd(rtState);
+    SpriteBatchPipelineStateDescription pd(rtState
+        //);    // Use default 
+        , nullptr, nullptr, nullptr, &sampler); // use specific sampler
         //,&CommonStates::NonPremultiplied);   // Prevent use of premultiplied alpha, for textures without that
     m_spriteBatch = std::make_unique<SpriteBatch>(device, resourceUpload, pd);
 
@@ -326,6 +335,7 @@ void Game::CreateDeviceDependentResources()
     XMUINT2 catSize = GetTextureSize(m_texture.Get());
     m_origin.x = float(catSize.x / 2);
     m_origin.y = float(catSize.y / 2);
+
 
     //Create a future allowing the upload process to potentially happen on another thread, and wait for the upload to comlete before continuing
     auto uploadResourcesFinished = resourceUpload.End(
@@ -358,6 +368,7 @@ void Game::OnDeviceLost()
     m_texture.Reset();
     m_resourceDescriptors.reset();
     m_spriteBatch.reset();
+    m_states.reset();
 }
 
 void Game::OnDeviceRestored()
