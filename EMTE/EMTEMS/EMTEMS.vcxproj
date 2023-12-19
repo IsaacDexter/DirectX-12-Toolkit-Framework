@@ -213,6 +213,8 @@
   <ItemGroup>
     <Image Include="textures\cat.dds" />
     <Image Include="textures\cat.png" />
+    <Image Include="textures\rocks.jpg" />
+    <Image Include="textures\rocks_normalmap.dds" />
     <Image Include="textures\sunset.jpg" />
     <Image Include="xbox.ico" />
   </ItemGroup>

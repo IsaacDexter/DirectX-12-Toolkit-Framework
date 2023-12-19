@@ -76,6 +76,19 @@ void Game::Update(DX::StepTimer const& timer)
 
     float time = float(m_timer.GetTotalSeconds());
     // TODO: Add your game logic here.
+
+
+    //Rotate the light based on elapsed time
+    float yaw = time * 0.4f;
+    float pitch = time * 0.7f;
+    float roll = time * 1.1f;
+    auto quat = Quaternion::CreateFromYawPitchRoll(pitch, roll, yaw);
+
+    auto light = XMVector3Rotate(g_XMOne, quat);
+
+    m_effect->SetLightDirection(0, light);
+
+
     elapsedTime;
 
     PIXEndEvent();
@@ -145,9 +158,9 @@ void Game::Render()
         // Start batch of primitive drawing operations
         m_batch->Begin(commandList);
 
-        VertexType v1(Vector3(  400.f,  150.f,  0.f ),  Vector2(0.5f,   0.f ));
-        VertexType v2(Vector3(  600.f,  450.f,  0.f ),  Vector2(1.f,    1.f ));
-        VertexType v3(Vector3(  200.f,  450.f,  0.f ),  Vector2(0.f,    1.f ));
+        VertexType v1(Vector3(  400.f,  150.f,  0.f ), -Vector3::UnitZ, Vector2(0.5f,   0.f ));
+        VertexType v2(Vector3(  600.f,  450.f,  0.f ), -Vector3::UnitZ, Vector2(1.f,    1.f ));
+        VertexType v3(Vector3(  200.f,  450.f,  0.f ), -Vector3::UnitZ, Vector2(0.f,    1.f ));
 
         m_batch->DrawTriangle(v1, v2, v3);
 
@@ -371,13 +384,24 @@ void Game::CreateDeviceDependentResources()
         DX::ThrowIfFailed(CreateDDSTextureFromFile(
             device,
             resourceUpload, // ResourceUploadBatch to upload texture to GPU
-            L"textures/rocks.dds", // Path of the texture to load
-            m_rocks.ReleaseAndGetAddressOf()  // Release the interface associated with comptr and retreieve a pointer to the released interface to store the texture into
+            L"textures/rocks_diff.dds", // Path of the texture to load
+            m_rocks_diff.ReleaseAndGetAddressOf()  // Release the interface associated with comptr and retreieve a pointer to the released interface to store the texture into
         ));
         CreateShaderResourceView(
             device,
-            m_rocks.Get(),    // Pointer to resource object that represents the Shader Resource
-            m_resourceDescriptors->GetCpuHandle(Descriptors::Rocks)   // Descriptor handle that represents the SRV 
+            m_rocks_diff.Get(),    // Pointer to resource object that represents the Shader Resource
+            m_resourceDescriptors->GetCpuHandle(Descriptors::Rocks_diff)   // Descriptor handle that represents the SRV 
+        );
+        DX::ThrowIfFailed(CreateDDSTextureFromFile(
+            device,
+            resourceUpload, // ResourceUploadBatch to upload texture to GPU
+            L"textures/rocks_norm.dds", // Path of the texture to load
+            m_rocks_norm.ReleaseAndGetAddressOf()  // Release the interface associated with comptr and retreieve a pointer to the released interface to store the texture into
+        ));
+        CreateShaderResourceView(
+            device,
+            m_rocks_norm.Get(),    // Pointer to resource object that represents the Shader Resource
+            m_resourceDescriptors->GetCpuHandle(Descriptors::Rocks_norm)   // Descriptor handle that represents the SRV 
         );
 
         auto sampler = m_states->LinearWrap();
@@ -416,8 +440,14 @@ void Game::CreateDeviceDependentResources()
         );
 
         // create the basiceffect to use the pipeline description and colored vertices
-        m_effect = std::make_unique<BasicEffect>(device, EffectFlags::Texture, pd);
-        m_effect->SetTexture(m_resourceDescriptors->GetGpuHandle(Descriptors::Rocks), m_states->LinearClamp());
+        m_effect = std::make_unique<NormalMapEffect>(device, EffectFlags::None, pd);
+        // Set the texture descriptors for this effect
+        m_effect->SetTexture(m_resourceDescriptors->GetGpuHandle(Descriptors::Rocks_diff), m_states->LinearClamp());
+        m_effect->SetNormalTexture(m_resourceDescriptors->GetGpuHandle(Descriptors::Rocks_norm));
+
+        // Enable built in, dot product lighting
+        m_effect->EnableDefaultLighting();
+        m_effect->SetLightDiffuseColor(0, Colors::Gray);
     }
 
 
@@ -457,7 +487,8 @@ void Game::OnDeviceLost()
     m_graphicsMemory.reset();
     m_cat.Reset();
     m_background.Reset();
-    m_rocks.Reset();
+    m_rocks_diff.Reset();
+    m_rocks_norm.Reset();
     m_resourceDescriptors.reset();
     m_spriteBatch.reset();
     m_states.reset();

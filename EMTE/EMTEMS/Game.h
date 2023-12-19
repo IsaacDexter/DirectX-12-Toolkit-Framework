@@ -77,14 +77,16 @@ private:
     std::unique_ptr<DirectX::DescriptorHeap> m_resourceDescriptors;
     Microsoft::WRL::ComPtr<ID3D12Resource> m_cat;
     Microsoft::WRL::ComPtr<ID3D12Resource> m_background;
-    Microsoft::WRL::ComPtr<ID3D12Resource> m_rocks;
+    Microsoft::WRL::ComPtr<ID3D12Resource> m_rocks_diff;
+    Microsoft::WRL::ComPtr<ID3D12Resource> m_rocks_norm;
     RECT m_fullscreenRect;
 
     enum Descriptors
     {
         Cat,
         Background,
-        Rocks,
+        Rocks_diff,
+        Rocks_norm,
         Count
     };
 
@@ -96,10 +98,10 @@ private:
     std::unique_ptr<DirectX::CommonStates> m_states;
 
     // select the vertex input layout
-    using VertexType = DirectX::VertexPositionTexture;
+    using VertexType = DirectX::VertexPositionNormalTexture;
 
     //provides root signature and PSO
-    std::unique_ptr<DirectX::BasicEffect> m_effect;
+    std::unique_ptr<DirectX::NormalMapEffect> m_effect;
     // provides vertex buffer and primitive topology
     std::unique_ptr<DirectX::PrimitiveBatch<VertexType>> m_batch;
 };
