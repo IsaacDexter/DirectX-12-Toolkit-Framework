@@ -93,6 +93,9 @@
     <Image Include="textures\cat.png">
       <Filter>textures</Filter>
     </Image>
+    <Image Include="textures\cat.dds">
+      <Filter>textures</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <Manifest Include="settings.manifest">

@@ -296,11 +296,11 @@ void Game::CreateDeviceDependentResources()
     ResourceUploadBatch resourceUpload(device);
     resourceUpload.Begin();
 
-    // Load 2D texture using Windows Imaging Component (WIC)
-    DX::ThrowIfFailed(CreateWICTextureFromFile(
+    // Load 2D dds texture, use CreateWICTextureFromFile for pngs
+    DX::ThrowIfFailed(CreateDDSTextureFromFile(
         device, 
         resourceUpload, // ResourceUploadBatch to upload texture to GPU
-        L"textures/cat.png", // Path of the texture to load
+        L"textures/cat.dds", // Path of the texture to load
         m_texture.ReleaseAndGetAddressOf()  // Release the interface associated with comptr and retreieve a pointer to the released interface to store the texture into
     )); 
 
@@ -319,6 +319,7 @@ void Game::CreateDeviceDependentResources()
 
     ///<summary>state description used when creating PSO used in the sprite batch</summary>
     SpriteBatchPipelineStateDescription pd(rtState);
+        //,&CommonStates::NonPremultiplied);   // Prevent use of premultiplied alpha, for textures without that
     m_spriteBatch = std::make_unique<SpriteBatch>(device, resourceUpload, pd);
 
     // set position of sprite
