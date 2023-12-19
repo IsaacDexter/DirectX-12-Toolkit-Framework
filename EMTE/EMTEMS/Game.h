@@ -76,10 +76,13 @@ private:
     /// <summary>Stores and allocates objects needed by shaders</summary>
     std::unique_ptr<DirectX::DescriptorHeap> m_resourceDescriptors;
     Microsoft::WRL::ComPtr<ID3D12Resource> m_texture;
+    Microsoft::WRL::ComPtr<ID3D12Resource> m_background;
+    RECT m_fullscreenRect;
 
     enum Descriptors
     {
         Cat,
+        Background,
         Count
     };
 

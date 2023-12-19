@@ -112,11 +112,22 @@ void Game::Render()
     // Begin the batch of sprite drawing operations
     m_spriteBatch->Begin(commandList);
 
+
+    // Draw background texture
+    m_spriteBatch->Draw(
+        m_resourceDescriptors->GetGpuHandle(Descriptors::Background),
+        GetTextureSize(m_background.Get()),
+        m_fullscreenRect
+    );
+
     // Submit the work of drawing a texture to the command list
     m_spriteBatch->Draw(
         m_resourceDescriptors->GetGpuHandle(Descriptors::Cat),
         GetTextureSize(m_texture.Get()),
-        m_screenPos, nullptr, Colors::White, 0.f, m_origin); //Screen position, source rect, tint, rotation, origin
+        m_screenPos, nullptr, Colors::White, 0.f, m_origin  //Screen position, source rect, tint, rotation, origin
+    ); 
+
+
 
     // End the batch of sprite drawing operations
     m_spriteBatch->End();
@@ -306,12 +317,24 @@ void Game::CreateDeviceDependentResources()
         L"textures/cat.dds", // Path of the texture to load
         m_texture.ReleaseAndGetAddressOf()  // Release the interface associated with comptr and retreieve a pointer to the released interface to store the texture into
     )); 
-
     // Create a shader resource view, which describes the properties of a texture
     CreateShaderResourceView(
         device,
         m_texture.Get(),    // Pointer to resource object that represents the Shader Resource
         m_resourceDescriptors->GetCpuHandle(Descriptors::Cat)   // Descriptor handle that represents the SRV 
+    );
+
+    // Load background texture
+    DX::ThrowIfFailed(CreateWICTextureFromFile(
+        device, 
+        resourceUpload, // ResourceUploadBatch to upload texture to GPU
+        L"textures/sunset.jpg", // Path of the texture to load
+        m_background.ReleaseAndGetAddressOf()  // Release the interface associated with comptr and retreieve a pointer to the released interface to store the texture into
+    )); 
+    CreateShaderResourceView(
+        device,
+        m_background.Get(),    // Pointer to resource object that represents the Shader Resource
+        m_resourceDescriptors->GetCpuHandle(Descriptors::Background)   // Descriptor handle that represents the SRV 
     );
 
     ///<summary>wraps information concerning render target used by DX12 when creating Pipeline State Objects</summary>
@@ -359,6 +382,8 @@ void Game::CreateWindowSizeDependentResources()
     auto size = m_deviceResources->GetOutputSize();
     m_screenPos.x = float(size.right) / 2.f;
     m_screenPos.y = float(size.bottom) / 2.f;
+
+    m_fullscreenRect = m_deviceResources->GetOutputSize();
 }
 
 void Game::OnDeviceLost()
@@ -366,6 +391,7 @@ void Game::OnDeviceLost()
     // TODO: Add Direct3D resource cleanup here.
     m_graphicsMemory.reset();
     m_texture.Reset();
+    m_background.Reset();
     m_resourceDescriptors.reset();
     m_spriteBatch.reset();
     m_states.reset();
