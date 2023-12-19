@@ -107,6 +107,8 @@ void Game::Render()
         , m_states->Heap()};  //Use specific sampler state
     commandList->SetDescriptorHeaps(static_cast<UINT>(std::size(heaps)), heaps);
 
+
+
     RenderGui();
 
     // Render sprites
@@ -125,7 +127,7 @@ void Game::Render()
         // Submit the work of drawing a texture to the command list
         m_spriteBatch->Draw(
             m_resourceDescriptors->GetGpuHandle(Descriptors::Cat),
-            GetTextureSize(m_texture.Get()),
+            GetTextureSize(m_cat.Get()),
             Vector2(50.f, 50.f), nullptr, Colors::White, 0.f  //Screen position, source rect, tint, rotation, origin
         );
 
@@ -134,6 +136,7 @@ void Game::Render()
         // End the batch of sprite drawing operations
         m_spriteBatch->End();
     }
+
     // Render primitives
     {
         // apply the basic effect
@@ -142,9 +145,9 @@ void Game::Render()
         // Start batch of primitive drawing operations
         m_batch->Begin(commandList);
 
-        VertexType v1(Vector3(  400.f,   150.f,   0.f), Colors::OliveDrab);
-        VertexType v2(Vector3(  600.f,   450.f,  0.f), Colors::Orchid);
-        VertexType v3(Vector3(  200.f,  450.f,  0.f), Colors::Navy);
+        VertexType v1(Vector3(  400.f,  150.f,  0.f ),  Vector2(0.5f,   0.f ));
+        VertexType v2(Vector3(  600.f,  450.f,  0.f ),  Vector2(1.f,    1.f ));
+        VertexType v3(Vector3(  200.f,  450.f,  0.f ),  Vector2(0.f,    1.f ));
 
         m_batch->DrawTriangle(v1, v2, v3);
 
@@ -153,6 +156,7 @@ void Game::Render()
     }
 
     
+
     PIXEndEvent(commandList);
 
     // Show the new frame.
@@ -323,22 +327,8 @@ void Game::CreateDeviceDependentResources()
         m_deviceResources->GetDepthBufferFormat()
     );
 
-    //Set up primitive batch
-    {
-        m_batch = std::make_unique<PrimitiveBatch<VertexType>>(device);
-
-        // create the pipeline description for the BasicEffect object
-        EffectPipelineStateDescription pd(
-            &VertexType::InputLayout,
-            CommonStates::Opaque,
-            CommonStates::DepthDefault,
-            CommonStates::CullNone,
-            rtState
-        );
-
-        // create the basiceffect to use the pipeline description and colored vertices
-        m_effect = std::make_unique<BasicEffect>(device, EffectFlags::VertexColor, pd);
-    }
+    // Create a common states object which provides a descriptor heap with pre-defined sampler descriptors
+    m_states = std::make_unique<CommonStates>(device);
 
     //Set up sprite batch
     {
@@ -355,12 +345,12 @@ void Game::CreateDeviceDependentResources()
             device,
             resourceUpload, // ResourceUploadBatch to upload texture to GPU
             L"textures/cat.dds", // Path of the texture to load
-            m_texture.ReleaseAndGetAddressOf()  // Release the interface associated with comptr and retreieve a pointer to the released interface to store the texture into
+            m_cat.ReleaseAndGetAddressOf()  // Release the interface associated with comptr and retreieve a pointer to the released interface to store the texture into
         ));
         // Create a shader resource view, which describes the properties of a texture
         CreateShaderResourceView(
             device,
-            m_texture.Get(),    // Pointer to resource object that represents the Shader Resource
+            m_cat.Get(),    // Pointer to resource object that represents the Shader Resource
             m_resourceDescriptors->GetCpuHandle(Descriptors::Cat)   // Descriptor handle that represents the SRV 
         );
 
@@ -375,10 +365,21 @@ void Game::CreateDeviceDependentResources()
             device,
             m_background.Get(),    // Pointer to resource object that represents the Shader Resource
             m_resourceDescriptors->GetCpuHandle(Descriptors::Background)   // Descriptor handle that represents the SRV 
+        ); 
+        
+        // Load rocks texture
+        DX::ThrowIfFailed(CreateDDSTextureFromFile(
+            device,
+            resourceUpload, // ResourceUploadBatch to upload texture to GPU
+            L"textures/rocks.dds", // Path of the texture to load
+            m_rocks.ReleaseAndGetAddressOf()  // Release the interface associated with comptr and retreieve a pointer to the released interface to store the texture into
+        ));
+        CreateShaderResourceView(
+            device,
+            m_rocks.Get(),    // Pointer to resource object that represents the Shader Resource
+            m_resourceDescriptors->GetCpuHandle(Descriptors::Rocks)   // Descriptor handle that represents the SRV 
         );
 
-        // Create a common states object which provides a descriptor heap with pre-defined sampler descriptors
-        m_states = std::make_unique<CommonStates>(device);
         auto sampler = m_states->LinearWrap();
 
         ///<summary>state description used when creating PSO used in the sprite batch</summary>
@@ -389,7 +390,7 @@ void Game::CreateDeviceDependentResources()
         m_spriteBatch = std::make_unique<SpriteBatch>(device, resourceUpload, pd);
 
         // set position of sprite
-        XMUINT2 catSize = GetTextureSize(m_texture.Get());
+        XMUINT2 catSize = GetTextureSize(m_cat.Get());
         m_origin.x = float(catSize.x / 2);
         m_origin.y = float(catSize.y / 2);
 
@@ -400,6 +401,25 @@ void Game::CreateDeviceDependentResources()
         );
         uploadResourcesFinished.wait();
     }
+
+    //Set up primitive batch
+    {
+        m_batch = std::make_unique<PrimitiveBatch<VertexType>>(device);
+
+        // create the pipeline description for the BasicEffect object
+        EffectPipelineStateDescription pd(
+            &VertexType::InputLayout,
+            CommonStates::Opaque,
+            CommonStates::DepthDefault,
+            CommonStates::CullCounterClockwise, //Define CCW winding order
+            rtState
+        );
+
+        // create the basiceffect to use the pipeline description and colored vertices
+        m_effect = std::make_unique<BasicEffect>(device, EffectFlags::Texture, pd);
+        m_effect->SetTexture(m_resourceDescriptors->GetGpuHandle(Descriptors::Rocks), m_states->LinearClamp());
+    }
+
 
 
     device;
@@ -435,8 +455,9 @@ void Game::OnDeviceLost()
 {
     // TODO: Add Direct3D resource cleanup here.
     m_graphicsMemory.reset();
-    m_texture.Reset();
+    m_cat.Reset();
     m_background.Reset();
+    m_rocks.Reset();
     m_resourceDescriptors.reset();
     m_spriteBatch.reset();
     m_states.reset();

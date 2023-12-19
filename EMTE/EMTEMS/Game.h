@@ -75,14 +75,16 @@ private:
 
     /// <summary>Stores and allocates objects needed by shaders</summary>
     std::unique_ptr<DirectX::DescriptorHeap> m_resourceDescriptors;
-    Microsoft::WRL::ComPtr<ID3D12Resource> m_texture;
+    Microsoft::WRL::ComPtr<ID3D12Resource> m_cat;
     Microsoft::WRL::ComPtr<ID3D12Resource> m_background;
+    Microsoft::WRL::ComPtr<ID3D12Resource> m_rocks;
     RECT m_fullscreenRect;
 
     enum Descriptors
     {
         Cat,
         Background,
+        Rocks,
         Count
     };
 
@@ -94,7 +96,7 @@ private:
     std::unique_ptr<DirectX::CommonStates> m_states;
 
     // select the vertex input layout
-    using VertexType = DirectX::VertexPositionColor;
+    using VertexType = DirectX::VertexPositionTexture;
 
     //provides root signature and PSO
     std::unique_ptr<DirectX::BasicEffect> m_effect;
