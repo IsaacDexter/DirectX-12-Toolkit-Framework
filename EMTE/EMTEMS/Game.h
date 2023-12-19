@@ -50,6 +50,12 @@ private:
     void Update(DX::StepTimer const& timer);
     void Render();
 
+    // Dear ImGui
+    void StartGuiFrame();
+    void RenderGui();
+    void InitGui();
+    void ShutdownGui();
+
     void Clear();
 
     void CreateDeviceDependentResources();
@@ -66,4 +72,26 @@ private:
     /// <para>Ensure initialization when creating resources</para>
     /// </summary>
     std::unique_ptr<DirectX::GraphicsMemory> m_graphicsMemory;
+
+    /// <summary>Stores and allocates objects needed by shaders</summary>
+    std::unique_ptr<DirectX::DescriptorHeap> m_resourceDescriptors;
+    Microsoft::WRL::ComPtr<ID3D12Resource> m_texture;
+    Microsoft::WRL::ComPtr<ID3D12Resource> m_background;
+    RECT m_fullscreenRect;
+
+    enum Descriptors
+    {
+        Cat,
+        Background,
+        Count
+    };
+
+    /// <summary>Helper that handles additional D3D resources required for drawing</summary>
+    std::unique_ptr<DirectX::SpriteBatch> m_spriteBatch;
+    DirectX::SimpleMath::Vector2 m_screenPos;
+    float m_rotation;
+    float m_scale;
+    DirectX::SimpleMath::Vector2 m_origin;
+
+    std::unique_ptr<DirectX::CommonStates> m_states;
 };
