@@ -28,6 +28,8 @@ Game::~Game()
     {
         m_deviceResources->WaitForGpu();
     }
+    
+    ShutdownGui();
 }
 
 // Initialize the Direct3D resources required to run.
@@ -41,6 +43,8 @@ void Game::Initialize(HWND window, int width, int height)
     m_deviceResources->CreateWindowSizeDependentResources();
     CreateWindowSizeDependentResources();
 
+    
+
     // TODO: Change the timer settings if you want something other than the default variable timestep mode.
     // e.g. for 60 FPS fixed timestep update logic, call:
     /*
@@ -53,6 +57,8 @@ void Game::Initialize(HWND window, int width, int height)
 // Executes the basic game loop.
 void Game::Tick()
 {
+    StartGuiFrame();
+
     m_timer.Tick([&]()
         {
             Update(m_timer);
@@ -93,7 +99,8 @@ void Game::Render()
     PIXBeginEvent(commandList, PIX_COLOR_DEFAULT, L"Render");
 
     // TODO: Add your rendering code here.
-
+    RenderGui();
+    
     PIXEndEvent(commandList);
 
     // Show the new frame.
@@ -103,6 +110,56 @@ void Game::Render()
     // This checks to release old frame data.
     m_graphicsMemory->Commit(m_deviceResources->GetCommandQueue());
     PIXEndEvent(m_deviceResources->GetCommandQueue());
+}
+
+void Game::StartGuiFrame()
+{
+    //// Start ImGui frame
+    //ImGui_ImplDX12_NewFrame();
+    //ImGui_ImplWin32_NewFrame();
+    //ImGui::NewFrame();
+    //ImGui::ShowDemoWindow();
+}
+
+void Game::RenderGui()
+{
+    //ImGui::Render();
+    //ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), YOUR_DX12_COMMAND_LIST);
+}
+
+void Game::InitGui()
+{
+    //auto device = m_deviceResources->GetD3DDevice();
+    //auto window = m_deviceResources->GetWindow();
+
+    //// Create GUI context
+    //ImGui::CreateContext();
+
+    //// TODO: Set configuration flags, load fonts, setup style
+    //ImGuiIO& io = ImGui::GetIO();
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;   //Enable keyboard controls
+    //io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;   //Enable docking, as using docking branch
+    //// Initialize platform and rendering backends
+    //ImGui_ImplWin32_Init(window);
+    //// TODO: Initialize DX12 rendering backends
+    //ImGui_ImplDX12_Init(
+    // device,
+    // framesInFlight,
+    // DXGIFormat,
+    // SRVDescriptorHeap,
+    // SRVDescriptorHeap->GetCPUDescriptorHandleForHeapStart(),
+    // SRVDescriptorHeap->GetGPUDescriptorHandleForHeapStart()
+    //  );
+
+    //device;
+    //window;
+}
+
+void Game::ShutdownGui()
+{
+    //ImGui_ImplDX12_Shutdown();
+    //ImGui_ImplWin32_Shutdown();
+    //ImGui::DestroyContext();
 }
 
 // Helper method to clear the back buffers.
@@ -188,6 +245,7 @@ void Game::GetDefaultSize(int& width, int& height) const noexcept
 void Game::CreateDeviceDependentResources()
 {
     auto device = m_deviceResources->GetD3DDevice();
+    
 
     // Check Shader Model 6 support
     D3D12_FEATURE_DATA_SHADER_MODEL shaderModel = { D3D_SHADER_MODEL_6_0 };
@@ -202,6 +260,9 @@ void Game::CreateDeviceDependentResources()
 
     // TODO: Initialize device dependent objects here (independent of window size).
     m_graphicsMemory = std::make_unique<GraphicsMemory>(device);
+
+    InitGui();
+
     device;
 }
 

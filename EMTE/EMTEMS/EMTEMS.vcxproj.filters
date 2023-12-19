@@ -8,6 +8,12 @@
       <UniqueIdentifier>91b4ef41-60d1-4e9f-a217-e5ca47a79c1b</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dds;dlg;fbx;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tga;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="ImGui">
+      <UniqueIdentifier>{28312016-1ea8-411a-9701-3b6c8d14aea0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ImGui\backends">
+      <UniqueIdentifier>{072745e2-d873-4f51-bfc3-fcfb8cd7d615}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -21,6 +27,24 @@
     <ClInclude Include="d3dx12.h">
       <Filter>Common</Filter>
     </ClInclude>
+    <ClInclude Include="..\ImGui\imconfig.h">
+      <Filter>ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ImGui\imgui.h">
+      <Filter>ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ImGui\imgui_internal.h">
+      <Filter>ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ImGui\misc\cpp\imgui_stdlib.h">
+      <Filter>ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ImGui\backends\imgui_impl_dx12.h">
+      <Filter>ImGui\backends</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ImGui\backends\imgui_impl_win32.h">
+      <Filter>ImGui\backends</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
@@ -28,6 +52,30 @@
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="DeviceResources.cpp">
       <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ImGui\imgui.cpp">
+      <Filter>ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ImGui\imgui_demo.cpp">
+      <Filter>ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ImGui\imgui_draw.cpp">
+      <Filter>ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ImGui\imgui_tables.cpp">
+      <Filter>ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ImGui\imgui_widgets.cpp">
+      <Filter>ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ImGui\misc\cpp\imgui_stdlib.cpp">
+      <Filter>ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ImGui\backends\imgui_impl_dx12.cpp">
+      <Filter>ImGui\backends</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ImGui\backends\imgui_impl_win32.cpp">
+      <Filter>ImGui\backends</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

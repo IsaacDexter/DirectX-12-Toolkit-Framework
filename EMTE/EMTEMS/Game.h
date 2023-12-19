@@ -50,6 +50,12 @@ private:
     void Update(DX::StepTimer const& timer);
     void Render();
 
+    // Dear ImGui
+    void StartGuiFrame();
+    void RenderGui();
+    void InitGui();
+    void ShutdownGui();
+
     void Clear();
 
     void CreateDeviceDependentResources();

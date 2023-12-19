@@ -267,3 +267,21 @@ ___
     * fences which are injected once per frame
     * reference counts
 * commit must be called once-per-frame to ensure proper tracking and cleanup
+
+___
+
+## Descriptor heaps
+* shaders reference object types that aren't part of the **Pipeline State Object** (PSO)
+    * **Shader Resource Views** (SRV)
+    * **Unordered Access Views** (UAV)
+    * **Constant Buffer Views** (CBV)
+    * **Samplers**
+* descriptor heaps store these object types and encompass memory allocation for them
+* they do this for as large a window as possible, ideally an entire frame or more
+
+if an application rapidly switches textures from the api that the pipeline sees,
+the descriptor needsspace to define descriptor tables on the fly for every set of state needed
+
+* required by DX12 to mirror GPU hardware
+* there is no option to put descriptors in memory, so they must be stored in descriptor heaps
+* they are accessible, and can be edited by the CPU, but cannot be edited by the GPU
