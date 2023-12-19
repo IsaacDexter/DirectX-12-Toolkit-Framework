@@ -4,14 +4,14 @@
        please refer to online GDK documentation found at https://aka.ms/GDK_MSGC
        or the MicrosoftGame.config topic in the System section of the offline GDK documentation. -->
 
-  <Identity Name="EMTE"
+  <Identity Name="EMTEMS"
             Publisher="CN=Publisher"
             Version="1.0.0.0"/>
 
   <ExecutableList>
-    <Executable Name="EMTE.exe"
+    <Executable Name="EMTEMS.exe"
                 Id="Game"
-                Alias="EMTE.exe"/>
+                Alias="EMTEMS.exe"/>
     <!--        TargetDeviceFamily="PC"
                 IsDevOnly="false" | IsDevOnly specifies if is a Development only executable.
                 OverrideDisplayName="Xbox Game Override"
@@ -21,12 +21,12 @@
                 OverrideSplashScreenImage="SplashScreenOverride.png" -->
   </ExecutableList>
 
-  <ShellVisuals DefaultDisplayName="EMTE"
+  <ShellVisuals DefaultDisplayName="EMTEMS"
                 PublisherDisplayName="PublisherName"
                 Square480x480Logo="LargeLogo.png"
                 Square150x150Logo="GraphicsLogo.png"
                 Square44x44Logo="SmallLogo.png"
-                Description="EMTE"
+                Description="EMTEMS"
                 ForegroundText="light"
                 BackgroundColor="#000040"
                 SplashScreenImage="SplashScreen.png"
