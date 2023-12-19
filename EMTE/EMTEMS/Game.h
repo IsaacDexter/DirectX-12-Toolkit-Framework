@@ -94,4 +94,12 @@ private:
     DirectX::SimpleMath::Vector2 m_origin;
 
     std::unique_ptr<DirectX::CommonStates> m_states;
+
+    // select the vertex input layout
+    using VertexType = DirectX::VertexPositionColor;
+
+    //provides root signature and PSO
+    std::unique_ptr<DirectX::BasicEffect> m_effect;
+    // provides vertex buffer and primitive topology
+    std::unique_ptr<DirectX::PrimitiveBatch<VertexType>> m_batch;
 };
