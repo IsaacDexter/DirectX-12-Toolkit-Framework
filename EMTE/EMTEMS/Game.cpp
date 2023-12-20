@@ -24,6 +24,10 @@ namespace
 Game::Game() noexcept(false)
 {
     //Inform device resources not to create a dpeth buffer, as there is to be an MSAA depth/stencil buffer
+    m_deviceResources = std::make_unique<DX::DeviceResources>(
+        DXGI_FORMAT_B8G8R8A8_UNORM, 
+        DXGI_FORMAT_UNKNOWN
+    );
     // TODO: Provide parameters for swapchain format, depth/stencil format, and backbuffer count.
     //   Add DX::DeviceResources::c_AllowTearing to opt-in to variable rate displays.
     //   Add DX::DeviceResources::c_EnableHDR for HDR10 display.
