@@ -28,8 +28,6 @@ Game::~Game()
     {
         m_deviceResources->WaitForGpu();
     }
-    
-    ShutdownGui();
 }
 
 // Initialize the Direct3D resources required to run.
@@ -57,7 +55,11 @@ void Game::Initialize(HWND window, int width, int height)
 // Executes the basic game loop.
 void Game::Tick()
 {
-    StartGuiFrame();
+    // Start ImGui frame
+    ImGui_ImplDX12_NewFrame();
+    ImGui_ImplWin32_NewFrame();
+    ImGui::NewFrame();
+    ImGui::ShowDemoWindow();
 
     m_timer.Tick([&]()
         {
@@ -122,8 +124,6 @@ void Game::Render()
 
 
 
-    RenderGui();
-
     // Render sprites
     {
         // Begin the batch of sprite drawing operations
@@ -168,7 +168,13 @@ void Game::Render()
         m_batch->End();
     }
 
+    // Render GUI
+    {
+        ImGui::Render();
+        ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), m_deviceResources->GetCommandList());
+    }
     
+
 
     PIXEndEvent(commandList);
 
@@ -179,56 +185,6 @@ void Game::Render()
     // This checks to release old frame data.
     m_graphicsMemory->Commit(m_deviceResources->GetCommandQueue());
     PIXEndEvent(m_deviceResources->GetCommandQueue());
-}
-
-void Game::StartGuiFrame()
-{
-    //// Start ImGui frame
-    //ImGui_ImplDX12_NewFrame();
-    //ImGui_ImplWin32_NewFrame();
-    //ImGui::NewFrame();
-    //ImGui::ShowDemoWindow();
-}
-
-void Game::RenderGui()
-{
-    //ImGui::Render();
-    //ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), YOUR_DX12_COMMAND_LIST);
-}
-
-void Game::InitGui()
-{
-    //auto device = m_deviceResources->GetD3DDevice();
-    //auto window = m_deviceResources->GetWindow();
-
-    //// Create GUI context
-    //ImGui::CreateContext();
-
-    //// TODO: Set configuration flags, load fonts, setup style
-    //ImGuiIO& io = ImGui::GetIO();
-    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;   //Enable keyboard controls
-    //io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;   //Enable docking, as using docking branch
-    //// Initialize platform and rendering backends
-    //ImGui_ImplWin32_Init(window);
-    //// TODO: Initialize DX12 rendering backends
-    //ImGui_ImplDX12_Init(
-    // device,
-    // framesInFlight,
-    // DXGIFormat,
-    // SRVDescriptorHeap,
-    // SRVDescriptorHeap->GetCPUDescriptorHandleForHeapStart(),
-    // SRVDescriptorHeap->GetGPUDescriptorHandleForHeapStart()
-    //  );
-
-    //device;
-    //window;
-}
-
-void Game::ShutdownGui()
-{
-    //ImGui_ImplDX12_Shutdown();
-    //ImGui_ImplWin32_Shutdown();
-    //ImGui::DestroyContext();
 }
 
 // Helper method to clear the back buffers.
@@ -314,8 +270,8 @@ void Game::GetDefaultSize(int& width, int& height) const noexcept
 void Game::CreateDeviceDependentResources()
 {
     auto device = m_deviceResources->GetD3DDevice();
+    auto window = m_deviceResources->GetWindow();
     
-
     // Check Shader Model 6 support
     D3D12_FEATURE_DATA_SHADER_MODEL shaderModel = { D3D_SHADER_MODEL_6_0 };
     if (FAILED(device->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &shaderModel, sizeof(shaderModel)))
@@ -330,10 +286,6 @@ void Game::CreateDeviceDependentResources()
     // TODO: Initialize device dependent objects here (independent of window size).
     m_graphicsMemory = std::make_unique<GraphicsMemory>(device);
 
-
-    //Initialize ImGui
-    InitGui();
-
     ///<summary>wraps information concerning render target used by DX12 when creating Pipeline State Objects</summary>
     RenderTargetState rtState(
         m_deviceResources->GetBackBufferFormat(),
@@ -343,11 +295,14 @@ void Game::CreateDeviceDependentResources()
     // Create a common states object which provides a descriptor heap with pre-defined sampler descriptors
     m_states = std::make_unique<CommonStates>(device);
 
+    m_resourceDescriptors = std::make_unique<DescriptorHeap>(device, Descriptors::Count);
+    
+
+
     //Set up sprite batch
     {
         // Load Texture
         // Make resource descriptor heap
-        m_resourceDescriptors = std::make_unique<DescriptorHeap>(device, Descriptors::Count);
 
         // Initialize helper class for uploading textures to GPU
         ResourceUploadBatch resourceUpload(device);
@@ -426,6 +381,8 @@ void Game::CreateDeviceDependentResources()
         uploadResourcesFinished.wait();
     }
 
+
+
     //Set up primitive batch
     {
         m_batch = std::make_unique<PrimitiveBatch<VertexType>>(device);
@@ -448,6 +405,32 @@ void Game::CreateDeviceDependentResources()
         // Enable built in, dot product lighting
         m_effect->EnableDefaultLighting();
         m_effect->SetLightDiffuseColor(0, Colors::Gray);
+    }
+
+
+
+    //Set up GUI
+    {
+        // Create GUI context
+        ImGui::CreateContext();
+
+        // TODO: Set configuration flags, load fonts, setup style
+        ImGuiIO& io = ImGui::GetIO();
+        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;   //Enable keyboard controls
+        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;   //Enable docking, as using docking branch
+
+        // Initialize platform and rendering backends
+        ImGui_ImplWin32_Init(window);
+
+        // TODO: Initialize DX12 rendering backends
+        ImGui_ImplDX12_Init(
+            device,
+            m_deviceResources->GetBackBufferCount(),
+            m_deviceResources->GetBackBufferFormat(),
+            m_resourceDescriptors->Heap(),
+            m_resourceDescriptors->GetFirstCpuHandle(),
+            m_resourceDescriptors->GetFirstGpuHandle()
+        );
     }
 
 
@@ -494,6 +477,10 @@ void Game::OnDeviceLost()
     m_states.reset();
     m_effect.reset();
     m_batch.reset();
+
+    ImGui_ImplDX12_Shutdown();
+    ImGui_ImplWin32_Shutdown();
+    ImGui::DestroyContext();
 }
 
 void Game::OnDeviceRestored()

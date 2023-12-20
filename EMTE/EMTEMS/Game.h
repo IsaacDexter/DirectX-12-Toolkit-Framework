@@ -50,12 +50,6 @@ private:
     void Update(DX::StepTimer const& timer);
     void Render();
 
-    // Dear ImGui
-    void StartGuiFrame();
-    void RenderGui();
-    void InitGui();
-    void ShutdownGui();
-
     void Clear();
 
     void CreateDeviceDependentResources();
@@ -81,6 +75,7 @@ private:
     Microsoft::WRL::ComPtr<ID3D12Resource> m_rocks_norm;
     RECT m_fullscreenRect;
 
+    // The cat is called Lollipop!
     enum Descriptors
     {
         Cat,
