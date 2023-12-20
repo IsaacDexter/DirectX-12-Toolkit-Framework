@@ -370,4 +370,24 @@ ___
 * provides **primitive topology**
 * used for drawing multiple vertices in a batch
 
+## Resource Barrier
+* per-resource state management is handled by the application in DX12
+* a per-resource state could be whether a resource is currently being accessed through a 
+    * **Shader resource view** (SRV)
+    * **Render target view** (RTV)
+* a resource barrier manages per-resource states
+* notifies graphics drivers of situations where it'll need to synchronize
+* 3 types:
+
+### Transition barrier
+* indicates subresources transition between different usages
+* specifies subresources is transition as well as it's before and after
+
+## Aliasing barrier
+* indicates a transition between two different resources with overlapping mappings in the same heap
+
+## Unorder access view (UAV) barrier
+* indactes all uav accesses to a particular resource must complete between any future UAV access
+* only necessary for write
+
 

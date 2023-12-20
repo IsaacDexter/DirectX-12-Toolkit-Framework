@@ -105,8 +105,18 @@ private:
     std::unique_ptr<DirectX::BasicEffect> m_wireframeEffect;
     std::unique_ptr<DirectX::PrimitiveBatch<WireframeVertexType>> m_wireframeBatch;
     
-    
+    // matrices
     DirectX::SimpleMath::Matrix m_world;
     DirectX::SimpleMath::Matrix m_view;
     DirectX::SimpleMath::Matrix m_proj;
+
+    // MSAA
+    /// <summary>Render target view descriptor heap</summary>
+    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_rtvDescHeap;
+    /// <summary>Depth Stencil View descriptor heap</summary>
+    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_dsvDescHeap;
+    /// <summary>MSAA Depth Stencil</summary>
+    Microsoft::WRL::ComPtr<ID3D12Resource> m_ds;
+    /// <summary>MSAA off screen render target view</summary>
+    Microsoft::WRL::ComPtr<ID3D12Resource> m_msaaRt;
 };

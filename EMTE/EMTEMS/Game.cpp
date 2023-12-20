@@ -12,9 +12,18 @@ using namespace DirectX::SimpleMath;
 
 using Microsoft::WRL::ComPtr;
 
+// MSAA constants
+namespace 
+{
+    // render target and depth bufferwill be 4x larger
+    constexpr UINT MSAA_COUNT = 4;
+    constexpr UINT MSAA_QUALITY = 0;
+    constexpr DXGI_FORMAT MSAA_DEPTH_FORMAT = DXGI_FORMAT_D32_FLOAT;
+}
+
 Game::Game() noexcept(false)
 {
-    m_deviceResources = std::make_unique<DX::DeviceResources>();
+    //Inform device resources not to create a dpeth buffer, as there is to be an MSAA depth/stencil buffer
     // TODO: Provide parameters for swapchain format, depth/stencil format, and backbuffer count.
     //   Add DX::DeviceResources::c_AllowTearing to opt-in to variable rate displays.
     //   Add DX::DeviceResources::c_EnableHDR for HDR10 display.
@@ -45,10 +54,10 @@ void Game::Initialize(HWND window, int width, int height)
 
     // TODO: Change the timer settings if you want something other than the default variable timestep mode.
     // e.g. for 60 FPS fixed timestep update logic, call:
-    /*
+    
     m_timer.SetFixedTimeStep(true);
     m_timer.SetTargetElapsedSeconds(1.0 / 60);
-    */
+    
 }
 
 #pragma region Frame Update
@@ -107,10 +116,24 @@ void Game::Render()
     }
 
     // Prepare the command list to render a new frame.
-    m_deviceResources->Prepare();
-    Clear();
+    m_deviceResources->Prepare(
+        D3D12_RESOURCE_STATE_PRESENT, 
+        D3D12_RESOURCE_STATE_RESOLVE_DEST
+    );
 
     auto commandList = m_deviceResources->GetCommandList();
+
+    //Set up a transition to handle transition of msaaRTV
+    auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+        m_msaaRt.Get(),
+        D3D12_RESOURCE_STATE_RESOLVE_SOURCE,
+        D3D12_RESOURCE_STATE_RENDER_TARGET
+    );
+    // notify drivers to synchronize multiple access to msaartv
+    commandList->ResourceBarrier(1, &barrier);
+
+    Clear();
+
     PIXBeginEvent(commandList, PIX_COLOR_DEFAULT, L"Render");
 
     // TODO: Add your rendering code here.
@@ -127,7 +150,7 @@ void Game::Render()
 
     // Render sprites
 
-        // Begin the batch of sprite drawing operations
+    // Begin the batch of sprite drawing operations
     m_spriteBatch->Begin(commandList);
 
 
@@ -145,10 +168,10 @@ void Game::Render()
         Vector2(50.f, 50.f), nullptr, Colors::White, 0.f  //Screen position, source rect, tint, rotation, origin
     );
 
-
-
     // End the batch of sprite drawing operations
     m_spriteBatch->End();
+
+
 
 
     // Render primitives
@@ -191,6 +214,8 @@ void Game::Render()
 
     m_wireframeBatch->End();
 
+
+
     // apply the basic effect
     // Set matrices
     m_effect->SetWorld(m_world);
@@ -200,15 +225,13 @@ void Game::Render()
     m_batch->Begin(commandList);
 
     VertexType v1(Vector3(0.0f, 3.f, 0.f), -Vector3::UnitZ, Vector2(0.5f, 0.f));
-    VertexType v2(Vector3(3.f, -3.f, 0.f), -Vector3::UnitZ, Vector2(1.f, 1.f));
-    VertexType v3(Vector3(-3.f, -3.f, 0.f), -Vector3::UnitZ, Vector2(0.f, 1.f));
+    VertexType v2(Vector3(-3.f, -3.f, 0.f), -Vector3::UnitZ, Vector2(0.f, 1.f));
+    VertexType v3(Vector3(3.f, -3.f, 0.f), -Vector3::UnitZ, Vector2(1.f, 1.f));
 
     m_batch->DrawTriangle(v1, v2, v3);
 
     // Cease this batch of primitive drawing operations
     m_batch->End();
-
-
 
     //Render GUI
     ImGuiIO& io = ImGui::GetIO();
@@ -225,12 +248,29 @@ void Game::Render()
 
 
 
+    //Set up a transition to resolve transition of msaaRTV
+    barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+        m_msaaRt.Get(),
+        D3D12_RESOURCE_STATE_RENDER_TARGET,
+        D3D12_RESOURCE_STATE_RESOLVE_SOURCE
+    );
+    // notify drivers to synchronize multiple access to msaartv
+    commandList->ResourceBarrier(1, &barrier);
+
+    // resolve the previous transtion of MSAA render target view into deviceresources render target
+    commandList->ResolveSubresource(
+        m_deviceResources->GetRenderTarget(),
+        0,
+        m_msaaRt.Get(),
+        0,
+        m_deviceResources->GetBackBufferFormat()
+    );
 
     PIXEndEvent(commandList);
 
     // Show the new frame.
     PIXBeginEvent(m_deviceResources->GetCommandQueue(), PIX_COLOR_DEFAULT, L"Present");
-    m_deviceResources->Present();
+    m_deviceResources->Present(D3D12_RESOURCE_STATE_RESOLVE_DEST);
     // Let manager know a frame's worth of video memory has been sent to the GPU
     // This checks to release old frame data.
     m_graphicsMemory->Commit(m_deviceResources->GetCommandQueue());
@@ -244,8 +284,12 @@ void Game::Clear()
     PIXBeginEvent(commandList, PIX_COLOR_DEFAULT, L"Clear");
 
     // Clear the views.
-    auto const rtvDescriptor = m_deviceResources->GetRenderTargetView();
-    auto const dsvDescriptor = m_deviceResources->GetDepthStencilView();
+    // Use the modified ones set up with MSAA
+    //auto const rtvDescriptor = m_deviceResources->GetRenderTargetView();
+    //auto const dsvDescriptor = m_deviceResources->GetDepthStencilView();
+    auto const rtvDescriptor = m_rtvDescHeap->GetCPUDescriptorHandleForHeapStart();
+    auto const dsvDescriptor = m_dsvDescHeap->GetCPUDescriptorHandleForHeapStart();
+
 
     commandList->OMSetRenderTargets(1, &rtvDescriptor, FALSE, &dsvDescriptor);
     commandList->ClearRenderTargetView(rtvDescriptor, Colors::CornflowerBlue, 0, nullptr);
@@ -335,11 +379,57 @@ void Game::CreateDeviceDependentResources()
 
     // TODO: Initialize device dependent objects here (independent of window size).
     m_graphicsMemory = std::make_unique<GraphicsMemory>(device);
+    
 
+
+    //Create MSAA descriptor heaps
+    //Create render target view descriptor heap
+    D3D12_DESCRIPTOR_HEAP_DESC rtvDescriptorHeapDesc = {};
+    rtvDescriptorHeapDesc.NumDescriptors = 1;
+    rtvDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+    
+    //Create descriptor heap based on the render target view descriptors
+    DX::ThrowIfFailed(device->CreateDescriptorHeap(
+        &rtvDescriptorHeapDesc,
+        IID_PPV_ARGS(m_rtvDescHeap.ReleaseAndGetAddressOf())
+    ));
+
+    // Create depth stencil view descriptor heap
+    D3D12_DESCRIPTOR_HEAP_DESC dsvDescriptorHeapDesc = {};
+    dsvDescriptorHeapDesc.NumDescriptors = 1;
+    dsvDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+
+    //Create descriptor heap based on the depth stencil view descriptors
+    DX::ThrowIfFailed(device->CreateDescriptorHeap(
+        &dsvDescriptorHeapDesc,
+        IID_PPV_ARGS(m_dsvDescHeap.ReleaseAndGetAddressOf())
+    ));
+
+
+    
     ///<summary>wraps information concerning render target used by DX12 when creating Pipeline State Objects</summary>
     RenderTargetState rtState(
         m_deviceResources->GetBackBufferFormat(),
-        m_deviceResources->GetDepthBufferFormat()
+        MSAA_DEPTH_FORMAT   //Use the MSAA depth buffer format specifically
+        //m_deviceResources->GetDepthBufferFormat()
+    );
+    rtState.sampleDesc.Count = MSAA_COUNT;
+    rtState.sampleDesc.Quality = MSAA_QUALITY;
+  
+    // helper structure for easy initialisation of a D3D12_RASTERIZER_DESC
+    // Creates a raster state the same as standard cullnone but with mutisampleenable set to true, to allow for msaa
+    CD3DX12_RASTERIZER_DESC rastDesc(
+        D3D12_FILL_MODE_SOLID,  //Fill mode
+        D3D12_CULL_MODE_NONE,   //Cull mode
+        FALSE,  //Front CCW (default false)
+        D3D12_DEFAULT_DEPTH_BIAS,   //Depth bias
+        D3D12_DEFAULT_DEPTH_BIAS_CLAMP, //Depth bias clamp
+        D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS, //Slope scaled depth bias
+        TRUE,   //Depth clip enable
+        TRUE,   //Multisampled enable (set to true to allow for MSAA)
+        FALSE,  //antialiased line enable
+        0, //Forced sample count
+        D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF   //Conservative raster
     );
 
     // Create a common states object which provides a descriptor heap with pre-defined sampler descriptors
@@ -443,7 +533,7 @@ void Game::CreateDeviceDependentResources()
         &VertexType::InputLayout,
         CommonStates::Opaque,
         CommonStates::DepthDefault,
-        CommonStates::CullCounterClockwise, //Define CCW winding order
+        rastDesc, //Define rasterizer setup above
         rtState
     );
 
@@ -466,7 +556,7 @@ void Game::CreateDeviceDependentResources()
         &VertexPositionColor::InputLayout,
         CommonStates::Opaque,
         CommonStates::DepthDefault,
-        CommonStates::CullNone, //Define CCW winding order
+        rastDesc,
         rtState,
         D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE
     );
@@ -510,12 +600,97 @@ void Game::CreateWindowSizeDependentResources()
     // TODO: Initialize windows-size dependent objects here.
     // Get screen coordinates
     auto viewport = m_deviceResources->GetScreenViewport();
-    m_spriteBatch->SetViewport(viewport);
-
     auto size = m_deviceResources->GetOutputSize();
+    auto device = m_deviceResources->GetD3DDevice();
 
+    m_spriteBatch->SetViewport(viewport);
     
+
+
+    //Initialize MSAA resources
+    CD3DX12_HEAP_PROPERTIES heapProperties(D3D12_HEAP_TYPE_DEFAULT);
+
+
+    // Create MSAA depth/stencil buffer
+    auto dsDesc = CD3DX12_RESOURCE_DESC::Tex2D(
+        MSAA_DEPTH_FORMAT,  //dxgi format
+        static_cast<UINT>(size.right),  //width
+        static_cast<UINT>(size.bottom), //height
+        1,  //This depth stencil view has only one texture
+        1,  //Use a single mipmap level
+        MSAA_COUNT, //sample count
+        MSAA_QUALITY // sample quality
+    );
+    // Set flag allowing depth stencil to be created for the resources
+    dsDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+
+    // value used to optimize clear operations for the depth stencil
+    D3D12_CLEAR_VALUE dsOptimizedClearValue = {};
+    dsOptimizedClearValue.Format = MSAA_DEPTH_FORMAT;
+    dsOptimizedClearValue.DepthStencil.Depth = 1.0f;
+    dsOptimizedClearValue.DepthStencil.Stencil = 0;
+
+    //Create a resource and an implicit heap big enough to contain it, and map it to the heap
+    // This resource houses the depth stencil
+    DX::ThrowIfFailed(device->CreateCommittedResource(
+        &heapProperties,
+        D3D12_HEAP_FLAG_NONE,
+        &dsDesc,
+        D3D12_RESOURCE_STATE_DEPTH_WRITE,
+        &dsOptimizedClearValue,
+        IID_PPV_ARGS(m_ds.ReleaseAndGetAddressOf())
+    ));
+
+
+    // Create depth stencil view
+    // Create descriptor for the depth stencil view
+    D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
+    dsvDesc.Format = MSAA_DEPTH_FORMAT;
+    dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2DMS; //access the resources as a 2d texture with multisampling (MS)
+
+    device->CreateDepthStencilView(
+        m_ds.Get(),
+        &dsvDesc,
+        m_dsvDescHeap->GetCPUDescriptorHandleForHeapStart()
+    );
     
+
+    // Create Render Target View
+    // Create descriptor for the render target view
+    auto msaaRtDesc = CD3DX12_RESOURCE_DESC::Tex2D(
+        m_deviceResources->GetBackBufferFormat(),
+        static_cast<UINT>(size.right),  //width
+        static_cast<UINT>(size.bottom), //height
+        1,  //This depth stencil view has only one texture
+        1,  //Use a single mipmap level
+        MSAA_COUNT, //sample count
+        MSAA_QUALITY // sample quality
+    );
+    msaaRtDesc.Flags |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+
+    // value used to optimize clear operations for the msaa render target view
+    D3D12_CLEAR_VALUE msaaRtOptimizedClearValue = {};
+    msaaRtOptimizedClearValue.Format = m_deviceResources->GetBackBufferFormat();
+    memcpy(msaaRtOptimizedClearValue.Color, Colors::CornflowerBlue, sizeof(float) * 4);
+
+    // Create resource to house the render target view
+    DX::ThrowIfFailed(device->CreateCommittedResource(
+        &heapProperties,
+        D3D12_HEAP_FLAG_NONE,
+        &msaaRtDesc,
+        D3D12_RESOURCE_STATE_RESOLVE_SOURCE,
+        &msaaRtOptimizedClearValue,
+        IID_PPV_ARGS(m_msaaRt.ReleaseAndGetAddressOf())
+    ));
+
+    device->CreateRenderTargetView(
+        m_msaaRt.Get(),
+        nullptr,
+        m_rtvDescHeap->GetCPUDescriptorHandleForHeapStart()
+    );
+
+
+
     //Initialize Matrices 
     m_view = Matrix::CreateLookAt(
         Vector3(0.0f, 2.f, 2.f), //Camera position
@@ -553,6 +728,11 @@ void Game::OnDeviceLost()
     m_batch.reset();
     m_wireframeEffect.reset();
     m_wireframeBatch.reset();
+
+    m_rtvDescHeap.Reset();
+    m_dsvDescHeap.Reset();
+    m_ds.Reset();
+    m_msaaRt.Reset();
 
     //Clean up GUI
     ImGui_ImplDX12_Shutdown();
