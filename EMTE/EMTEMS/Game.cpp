@@ -170,8 +170,17 @@ void Game::Render()
 
     // Render GUI
     {
+        ImGuiIO& io = ImGui::GetIO();
+
         ImGui::Render();
         ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), m_deviceResources->GetCommandList());
+
+        // Update and Render additional Platform Windows
+        if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+        {
+            ImGui::UpdatePlatformWindows();
+            ImGui::RenderPlatformWindowsDefault(nullptr, (void*)m_deviceResources->GetCommandList());
+        }
     }
     
 
@@ -418,6 +427,7 @@ void Game::CreateDeviceDependentResources()
         ImGuiIO& io = ImGui::GetIO();
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;   //Enable keyboard controls
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;   //Enable docking, as using docking branch
+        io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;   //Enable viewports
 
         // Initialize platform and rendering backends
         ImGui_ImplWin32_Init(window);
@@ -431,6 +441,8 @@ void Game::CreateDeviceDependentResources()
             m_resourceDescriptors->GetFirstCpuHandle(),
             m_resourceDescriptors->GetFirstGpuHandle()
         );
+
+        
     }
 
 
@@ -478,6 +490,7 @@ void Game::OnDeviceLost()
     m_effect.reset();
     m_batch.reset();
 
+    //Clean up GUI
     ImGui_ImplDX12_Shutdown();
     ImGui_ImplWin32_Shutdown();
     ImGui::DestroyContext();
