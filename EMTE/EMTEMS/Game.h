@@ -78,6 +78,7 @@ private:
     // The cat is called Lollipop!
     enum Descriptors
     {
+        Gui,
         Cat,
         Background,
         Rocks_diff,

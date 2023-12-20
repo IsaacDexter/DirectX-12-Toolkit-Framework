@@ -438,8 +438,8 @@ void Game::CreateDeviceDependentResources()
             m_deviceResources->GetBackBufferCount(),
             m_deviceResources->GetBackBufferFormat(),
             m_resourceDescriptors->Heap(),
-            m_resourceDescriptors->GetFirstCpuHandle(),
-            m_resourceDescriptors->GetFirstGpuHandle()
+            m_resourceDescriptors->GetCpuHandle(Descriptors::Gui),
+            m_resourceDescriptors->GetGpuHandle(Descriptors::Gui)
         );
 
         
