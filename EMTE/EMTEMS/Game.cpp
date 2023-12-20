@@ -81,14 +81,13 @@ void Game::Update(DX::StepTimer const& timer)
 
 
     //Rotate the light based on elapsed time
-    float yaw = time * 0.4f;
-    float pitch = time * 0.7f;
-    float roll = time * 1.1f;
-    auto quat = Quaternion::CreateFromYawPitchRoll(pitch, roll, yaw);
+    auto quat = Quaternion::CreateFromAxisAngle(Vector3::UnitY, time);
 
     auto light = XMVector3Rotate(g_XMOne, quat);
 
     m_effect->SetLightDirection(0, light);
+
+    m_world = Matrix::CreateRotationY(sinf(time));
 
 
     elapsedTime;
@@ -124,8 +123,7 @@ void Game::Render()
 
 
 
-    // Set matrices
-    m_effect->SetWorld(m_world);
+    
 
     // Render sprites
 
@@ -194,6 +192,8 @@ void Game::Render()
     m_wireframeBatch->End();
 
     // apply the basic effect
+    // Set matrices
+    m_effect->SetWorld(m_world);
     m_effect->Apply(commandList);
 
     // Start batch of primitive drawing operations
@@ -443,7 +443,7 @@ void Game::CreateDeviceDependentResources()
         &VertexType::InputLayout,
         CommonStates::Opaque,
         CommonStates::DepthDefault,
-        CommonStates::CullNone, //Define CCW winding order
+        CommonStates::CullCounterClockwise, //Define CCW winding order
         rtState
     );
 
@@ -518,11 +518,11 @@ void Game::CreateWindowSizeDependentResources()
     
     //Initialize Matrices 
     m_view = Matrix::CreateLookAt(
-        Vector3(2.f, 2.f, 2.f), //Camera position
+        Vector3(0.0f, 2.f, 2.f), //Camera position
         Vector3::Zero,  //Camera target
         Vector3::UnitY  //Camera up vector
     );
-    m_proj = Matrix::CreatePerspective(
+    m_proj = Matrix::CreatePerspectiveFieldOfView(
         XM_PI / 4.f,
         float(size.right) / float(size.bottom),
         0.1f,
