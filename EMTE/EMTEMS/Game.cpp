@@ -12,9 +12,27 @@ using namespace DirectX::SimpleMath;
 
 using Microsoft::WRL::ComPtr;
 
+namespace
+{
+    constexpr UINT MSAA_COUNT = 4;
+    constexpr DXGI_FORMAT MSAA_DEPTH_FORMAT = DXGI_FORMAT_D32_FLOAT;
+}
+
 Game::Game() noexcept(false)
 {
-    m_deviceResources = std::make_unique<DX::DeviceResources>();
+    //Create device resource instance without a depth buffer so an MSAA one can be used
+    m_deviceResources = std::make_unique<DX::DeviceResources>(
+        DXGI_FORMAT_B8G8R8A8_UNORM,
+        DXGI_FORMAT_UNKNOWN
+    );
+    //Initialize MSAA helper
+    m_msaaHelper = std::make_unique<DX::MSAAHelper>(
+        m_deviceResources->GetBackBufferFormat(),
+        MSAA_DEPTH_FORMAT,
+        MSAA_COUNT
+    );
+    m_msaaHelper->SetClearColor(Colors::CornflowerBlue);
+
     // TODO: Provide parameters for swapchain format, depth/stencil format, and backbuffer count.
     //   Add DX::DeviceResources::c_AllowTearing to opt-in to variable rate displays.
     //   Add DX::DeviceResources::c_EnableHDR for HDR10 display.
@@ -108,9 +126,12 @@ void Game::Render()
 
     // Prepare the command list to render a new frame.
     m_deviceResources->Prepare();
+    auto commandList = m_deviceResources->GetCommandList();
+    m_msaaHelper->Prepare(commandList);
     Clear();
 
-    auto commandList = m_deviceResources->GetCommandList();
+    //Prepare command list for MSAA render target view and stencil buffer for rendering a new frame
+
     PIXBeginEvent(commandList, PIX_COLOR_DEFAULT, L"Render");
 
     // TODO: Add your rendering code here.
@@ -199,9 +220,9 @@ void Game::Render()
     // Start batch of primitive drawing operations
     m_batch->Begin(commandList);
 
-    VertexType v1(Vector3(0.0f, 3.f, 0.f), -Vector3::UnitZ, Vector2(0.5f, 0.f));
-    VertexType v2(Vector3(3.f, -3.f, 0.f), -Vector3::UnitZ, Vector2(1.f, 1.f));
-    VertexType v3(Vector3(-3.f, -3.f, 0.f), -Vector3::UnitZ, Vector2(0.f, 1.f));
+    VertexType v1(Vector3(0.0f, 1.f, 0.f), -Vector3::UnitZ, Vector2(0.5f, 0.f));
+    VertexType v2(Vector3(1.f, -1.f, 0.f), -Vector3::UnitZ, Vector2(1.f, 1.f));
+    VertexType v3(Vector3(-1.f, -1.f, 0.f), -Vector3::UnitZ, Vector2(0.f, 1.f));
 
     m_batch->DrawTriangle(v1, v2, v3);
 
@@ -230,7 +251,8 @@ void Game::Render()
 
     // Show the new frame.
     PIXBeginEvent(m_deviceResources->GetCommandQueue(), PIX_COLOR_DEFAULT, L"Present");
-    m_deviceResources->Present();
+    m_msaaHelper->Resolve(commandList, m_deviceResources->GetRenderTarget());
+    m_deviceResources->Present(D3D12_RESOURCE_STATE_PRESENT);
     // Let manager know a frame's worth of video memory has been sent to the GPU
     // This checks to release old frame data.
     m_graphicsMemory->Commit(m_deviceResources->GetCommandQueue());
@@ -244,8 +266,9 @@ void Game::Clear()
     PIXBeginEvent(commandList, PIX_COLOR_DEFAULT, L"Clear");
 
     // Clear the views.
-    auto const rtvDescriptor = m_deviceResources->GetRenderTargetView();
-    auto const dsvDescriptor = m_deviceResources->GetDepthStencilView();
+    // render to the MSAA render target and depth/stencil buffer
+    auto const rtvDescriptor = m_msaaHelper->GetMSAARenderTargetView();
+    auto const dsvDescriptor = m_msaaHelper->GetMSAADepthStencilView();
 
     commandList->OMSetRenderTargets(1, &rtvDescriptor, FALSE, &dsvDescriptor);
     commandList->ClearRenderTargetView(rtvDescriptor, Colors::CornflowerBlue, 0, nullptr);
@@ -336,11 +359,17 @@ void Game::CreateDeviceDependentResources()
     // TODO: Initialize device dependent objects here (independent of window size).
     m_graphicsMemory = std::make_unique<GraphicsMemory>(device);
 
+    // Set the MSAA Device
+    m_msaaHelper->SetDevice(device);
+
+
+
     ///<summary>wraps information concerning render target used by DX12 when creating Pipeline State Objects</summary>
     RenderTargetState rtState(
         m_deviceResources->GetBackBufferFormat(),
-        m_deviceResources->GetDepthBufferFormat()
+        m_msaaHelper->GetDepthBufferFormat()    //Ensure to use msaa helpers depth buffer
     );
+    rtState.sampleDesc.Count = m_msaaHelper->GetSampleCount();
 
     // Create a common states object which provides a descriptor heap with pre-defined sampler descriptors
     m_states = std::make_unique<CommonStates>(device);
@@ -349,8 +378,6 @@ void Game::CreateDeviceDependentResources()
 
     //Initialize world matrix
     m_world = Matrix::Identity;
-
-
 
 
     //Set up sprite batch
@@ -515,6 +542,10 @@ void Game::CreateWindowSizeDependentResources()
     auto size = m_deviceResources->GetOutputSize();
 
     
+    // Set window size for MSAA
+    m_msaaHelper->SetWindow(size);
+
+
     
     //Initialize Matrices 
     m_view = Matrix::CreateLookAt(
@@ -553,6 +584,8 @@ void Game::OnDeviceLost()
     m_batch.reset();
     m_wireframeEffect.reset();
     m_wireframeBatch.reset();
+    m_msaaHelper->ReleaseDevice();
+    m_msaaHelper.reset();
 
     //Clean up GUI
     ImGui_ImplDX12_Shutdown();

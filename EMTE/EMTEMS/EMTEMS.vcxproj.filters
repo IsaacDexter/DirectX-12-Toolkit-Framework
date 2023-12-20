@@ -17,6 +17,9 @@
     <Filter Include="textures">
       <UniqueIdentifier>{8814df5f-9feb-4f2d-bbe9-e94c45cae1c2}</UniqueIdentifier>
     </Filter>
+    <Filter Include="DirectXTK">
+      <UniqueIdentifier>{6c614062-f517-4556-915c-63f83a648636}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -47,6 +50,9 @@
     </ClInclude>
     <ClInclude Include="..\ImGui\backends\imgui_impl_win32.h">
       <Filter>ImGui\backends</Filter>
+    </ClInclude>
+    <ClInclude Include="DirectXTK\MSAAHelper.h">
+      <Filter>DirectXTK</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -79,6 +85,9 @@
     </ClCompile>
     <ClCompile Include="..\ImGui\backends\imgui_impl_win32.cpp">
       <Filter>ImGui\backends</Filter>
+    </ClCompile>
+    <ClCompile Include="DirectXTK\MSAAHelper.cpp">
+      <Filter>DirectXTK</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
