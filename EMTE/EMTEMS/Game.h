@@ -50,12 +50,6 @@ private:
     void Update(DX::StepTimer const& timer);
     void Render();
 
-    // Dear ImGui
-    void StartGuiFrame();
-    void RenderGui();
-    void InitGui();
-    void ShutdownGui();
-
     void Clear();
 
     void CreateDeviceDependentResources();
@@ -81,8 +75,10 @@ private:
     Microsoft::WRL::ComPtr<ID3D12Resource> m_rocks_norm;
     RECT m_fullscreenRect;
 
+    // The cat is called Lollipop!
     enum Descriptors
     {
+        Gui,
         Cat,
         Background,
         Rocks_diff,
@@ -99,9 +95,20 @@ private:
 
     // select the vertex input layout
     using VertexType = DirectX::VertexPositionNormalTexture;
-
     //provides root signature and PSO
     std::unique_ptr<DirectX::NormalMapEffect> m_effect;
     // provides vertex buffer and primitive topology
     std::unique_ptr<DirectX::PrimitiveBatch<VertexType>> m_batch;
+
+    //Do the same for the wireframe effect and batch
+    using WireframeVertexType = DirectX::VertexPositionColor;
+    std::unique_ptr<DirectX::BasicEffect> m_wireframeEffect;
+    std::unique_ptr<DirectX::PrimitiveBatch<WireframeVertexType>> m_wireframeBatch;
+    
+    // DXTK Helper class to simplify MSAA, available at https://github.com/microsoft/DirectXTK12/wiki/MSAAHelper
+    std::unique_ptr<DX::MSAAHelper> m_msaaHelper;
+    
+    DirectX::SimpleMath::Matrix m_world;
+    DirectX::SimpleMath::Matrix m_view;
+    DirectX::SimpleMath::Matrix m_proj;
 };

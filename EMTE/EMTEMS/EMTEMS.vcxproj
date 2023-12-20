@@ -177,6 +177,7 @@
     <ClInclude Include="..\ImGui\imgui_internal.h" />
     <ClInclude Include="..\ImGui\misc\cpp\imgui_stdlib.h" />
     <ClInclude Include="d3dx12.h" />
+    <ClInclude Include="DirectXTK\MSAAHelper.h" />
     <ClInclude Include="Game.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="StepTimer.h" />
@@ -191,6 +192,7 @@
     <ClCompile Include="..\ImGui\imgui_tables.cpp" />
     <ClCompile Include="..\ImGui\imgui_widgets.cpp" />
     <ClCompile Include="..\ImGui\misc\cpp\imgui_stdlib.cpp" />
+    <ClCompile Include="DirectXTK\MSAAHelper.cpp" />
     <ClCompile Include="Game.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="DeviceResources.cpp" />
