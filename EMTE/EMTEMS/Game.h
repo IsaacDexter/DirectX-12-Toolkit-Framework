@@ -95,9 +95,18 @@ private:
 
     // select the vertex input layout
     using VertexType = DirectX::VertexPositionNormalTexture;
-
     //provides root signature and PSO
     std::unique_ptr<DirectX::NormalMapEffect> m_effect;
     // provides vertex buffer and primitive topology
     std::unique_ptr<DirectX::PrimitiveBatch<VertexType>> m_batch;
+
+    //Do the same for the wireframe effect and batch
+    using WireframeVertexType = DirectX::VertexPositionColor;
+    std::unique_ptr<DirectX::BasicEffect> m_wireframeEffect;
+    std::unique_ptr<DirectX::PrimitiveBatch<WireframeVertexType>> m_wireframeBatch;
+    
+    
+    DirectX::SimpleMath::Matrix m_world;
+    DirectX::SimpleMath::Matrix m_view;
+    DirectX::SimpleMath::Matrix m_proj;
 };
