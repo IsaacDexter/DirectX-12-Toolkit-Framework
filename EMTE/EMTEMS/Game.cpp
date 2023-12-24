@@ -161,8 +161,8 @@ void Game::Render()
 
     // Submit the work of drawing a texture to the command list
     m_spriteBatch->Draw(
-        m_resourceDescriptors->GetGpuHandle(Descriptors::Cat),
-        GetTextureSize(m_cat.Get()),
+        m_resourceDescriptors->GetGpuHandle(m_catSprite->GetDescriptor()),
+        m_catSprite->GetSize(),
         Vector2(50.f, 50.f), nullptr, Colors::White, 0.f  //Screen position, source rect, tint, rotation, origin
     );
 
@@ -388,19 +388,16 @@ void Game::CreateDeviceDependentResources()
     ResourceUploadBatch resourceUpload(device);
     resourceUpload.Begin();
 
+    Microsoft::WRL::ComPtr<ID3D12Resource> cat;
+
     // Load 2D dds texture, use CreateWICTextureFromFile for pngs
     DX::ThrowIfFailed(CreateDDSTextureFromFile(
         device,
         resourceUpload, // ResourceUploadBatch to upload texture to GPU
         L"textures/cat.dds", // Path of the texture to load
-        m_cat.ReleaseAndGetAddressOf()  // Release the interface associated with comptr and retreieve a pointer to the released interface to store the texture into
+        cat.ReleaseAndGetAddressOf()  // Release the interface associated with comptr and retreieve a pointer to the released interface to store the texture into
     ));
-    // Create a shader resource view, which describes the properties of a texture
-    CreateShaderResourceView(
-        device,
-        m_cat.Get(),    // Pointer to resource object that represents the Shader Resource
-        m_resourceDescriptors->GetCpuHandle(Descriptors::Cat)   // Descriptor handle that represents the SRV 
-    );
+    m_catSprite = std::make_unique<Sprite>(device, cat, m_resourceDescriptors.get());
 
     // Load background texture
     DX::ThrowIfFailed(CreateWICTextureFromFile(
@@ -448,10 +445,6 @@ void Game::CreateDeviceDependentResources()
     //,&CommonStates::NonPremultiplied);   // Prevent use of premultiplied alpha, for textures without that
     m_spriteBatch = std::make_unique<SpriteBatch>(device, resourceUpload, spd);
 
-    // set position of sprite
-    XMUINT2 catSize = GetTextureSize(m_cat.Get());
-    m_origin.x = float(catSize.x / 2);
-    m_origin.y = float(catSize.y / 2);
 
 
     //Create a future allowing the upload process to potentially happen on another thread, and wait for the upload to comlete before continuing
@@ -573,7 +566,6 @@ void Game::OnDeviceLost()
 {
     // TODO: Add Direct3D resource cleanup here.
     m_graphicsMemory.reset();
-    m_cat.Reset();
     m_background.Reset();
     m_rocks_diff.Reset();
     m_rocks_norm.Reset();

@@ -54,6 +54,7 @@
     <ClInclude Include="DirectXTK\MSAAHelper.h">
       <Filter>DirectXTK</Filter>
     </ClInclude>
+    <ClInclude Include="Sprite.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
@@ -89,6 +90,7 @@
     <ClCompile Include="DirectXTK\MSAAHelper.cpp">
       <Filter>DirectXTK</Filter>
     </ClCompile>
+    <ClCompile Include="Sprite.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="resource.rc">

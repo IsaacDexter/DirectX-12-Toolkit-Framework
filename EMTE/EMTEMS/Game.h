@@ -6,6 +6,7 @@
 
 #include "DeviceResources.h"
 #include "StepTimer.h"
+#include "Sprite.h"
 
 
 // A basic game implementation that creates a D3D12 device and
@@ -69,7 +70,6 @@ private:
 
     /// <summary>Stores and allocates objects needed by shaders</summary>
     std::unique_ptr<DirectX::DescriptorHeap> m_resourceDescriptors;
-    Microsoft::WRL::ComPtr<ID3D12Resource> m_cat;
     Microsoft::WRL::ComPtr<ID3D12Resource> m_background;
     Microsoft::WRL::ComPtr<ID3D12Resource> m_rocks_diff;
     Microsoft::WRL::ComPtr<ID3D12Resource> m_rocks_norm;
@@ -107,6 +107,8 @@ private:
     
     // DXTK Helper class to simplify MSAA, available at https://github.com/microsoft/DirectXTK12/wiki/MSAAHelper
     std::unique_ptr<DX::MSAAHelper> m_msaaHelper;
+
+    std::unique_ptr<Sprite> m_catSprite;
     
     DirectX::SimpleMath::Matrix m_world;
     DirectX::SimpleMath::Matrix m_view;
