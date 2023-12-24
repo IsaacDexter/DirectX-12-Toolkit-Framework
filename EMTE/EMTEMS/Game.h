@@ -6,7 +6,7 @@
 
 #include "DeviceResources.h"
 #include "StepTimer.h"
-#include "Sprite.h"
+#include "SpriteGroup.h"
 
 
 // A basic game implementation that creates a D3D12 device and
@@ -57,7 +57,7 @@ private:
     void CreateWindowSizeDependentResources();
 
     // Device resources.
-    std::unique_ptr<DX::DeviceResources>    m_deviceResources;
+    std::shared_ptr<DX::DeviceResources>    m_deviceResources;
 
     // Rendering loop timer.
     DX::StepTimer                           m_timer;
@@ -69,20 +69,22 @@ private:
     std::unique_ptr<DirectX::GraphicsMemory> m_graphicsMemory;
 
     /// <summary>Stores and allocates objects needed by shaders</summary>
-    std::unique_ptr<DirectX::DescriptorHeap> m_resourceDescriptors;
+    std::shared_ptr<DirectX::DescriptorHeap> m_resourceDescriptors;
     Microsoft::WRL::ComPtr<ID3D12Resource> m_background;
     Microsoft::WRL::ComPtr<ID3D12Resource> m_rocks_diff;
     Microsoft::WRL::ComPtr<ID3D12Resource> m_rocks_norm;
     RECT m_fullscreenRect;
 
+    std::unique_ptr<TextureGroup> m_textures;
+
     // The cat is called Lollipop!
     enum Descriptors
     {
-        Gui,
         Cat,
         Background,
         Rocks_diff,
         Rocks_norm,
+        Gui,
         Count
     };
 

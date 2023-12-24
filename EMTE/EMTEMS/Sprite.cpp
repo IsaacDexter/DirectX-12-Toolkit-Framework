@@ -10,25 +10,17 @@
 //    ));
 //}
 
-void Sprite::CreateSRV(ID3D12Device* device, DirectX::DescriptorHeap* descriptorHeap)
+inline void Sprite::SetSize()
 {
-    // Create a shader resource view, which describes the properties of a texture
-    DirectX::CreateShaderResourceView(
-        device,
-        m_texture.Get(),    // Pointer to resource object that represents the Shader Resource
-        descriptorHeap->GetCpuHandle(m_descriptor)   // Descriptor handle that represents the SRV 
-    );
+    m_size = DirectX::GetTextureSize(m_texture->resource.Get());
 }
 
-Sprite::Sprite(ID3D12Device* device, Microsoft::WRL::ComPtr<ID3D12Resource> texture, DirectX::DescriptorHeap* descriptorHeap)
+Sprite::Sprite(std::shared_ptr<Texture> texture)
 {
     m_texture = texture;
     SetSize();
-    SetDescriptor();
-    CreateSRV(device, descriptorHeap);
 }
 
 Sprite::~Sprite()
 {
-    m_texture.Reset();
 }

@@ -161,7 +161,7 @@ void Game::Render()
 
     // Submit the work of drawing a texture to the command list
     m_spriteBatch->Draw(
-        m_resourceDescriptors->GetGpuHandle(m_catSprite->GetDescriptor()),
+        m_resourceDescriptors->GetGpuHandle(m_catSprite->GetTexture()->descriptor),
         m_catSprite->GetSize(),
         Vector2(50.f, 50.f), nullptr, Colors::White, 0.f  //Screen position, source rect, tint, rotation, origin
     );
@@ -385,19 +385,18 @@ void Game::CreateDeviceDependentResources()
     // Make resource descriptor heap
 
      // Initialize helper class for uploading textures to GPU
+    m_textures = std::make_unique<TextureGroup>(m_deviceResources, m_resourceDescriptors);
+
+
+    m_textures->QueueTexture(L"textures/cat.dds");
+    m_textures->LoadTextures();
+    auto texture = m_textures->GetTexture(L"textures/cat.dds");
+    m_catSprite = std::make_unique<Sprite>(texture);
+
+
     ResourceUploadBatch resourceUpload(device);
     resourceUpload.Begin();
 
-    Microsoft::WRL::ComPtr<ID3D12Resource> cat;
-
-    // Load 2D dds texture, use CreateWICTextureFromFile for pngs
-    DX::ThrowIfFailed(CreateDDSTextureFromFile(
-        device,
-        resourceUpload, // ResourceUploadBatch to upload texture to GPU
-        L"textures/cat.dds", // Path of the texture to load
-        cat.ReleaseAndGetAddressOf()  // Release the interface associated with comptr and retreieve a pointer to the released interface to store the texture into
-    ));
-    m_catSprite = std::make_unique<Sprite>(device, cat, m_resourceDescriptors.get());
 
     // Load background texture
     DX::ThrowIfFailed(CreateWICTextureFromFile(

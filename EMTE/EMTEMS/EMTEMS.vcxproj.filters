@@ -55,6 +55,8 @@
       <Filter>DirectXTK</Filter>
     </ClInclude>
     <ClInclude Include="Sprite.h" />
+    <ClInclude Include="SpriteGroup.h" />
+    <ClInclude Include="Texture.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
@@ -91,6 +93,7 @@
       <Filter>DirectXTK</Filter>
     </ClCompile>
     <ClCompile Include="Sprite.cpp" />
+    <ClCompile Include="SpriteGroup.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="resource.rc">
