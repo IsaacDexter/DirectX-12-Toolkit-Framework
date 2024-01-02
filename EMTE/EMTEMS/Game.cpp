@@ -392,131 +392,116 @@ void Game::CreateDeviceDependentResources()
     //Initialize world matrix
     m_world = Matrix::Identity;
 
+    LoadTextures();
 
-    //Set up sprite batch
-    // Load Texture
-    // Make resource descriptor heap
-    // Initialize helper class for uploading textures to GPU
-    ResourceUploadBatch resourceUpload(device);
-
-    resourceUpload.Begin();
-
-    m_texHands = std::make_unique<std::map<const wchar_t*, TexHand>>();
-    // Create the EffectTextureFactory, a helper object to provide sharing of texture resources from the existing reosurce heap
-    m_textureResources = std::make_unique<DirectX::EffectTextureFactory>(
-        device,
-        resourceUpload,
-        m_srvPile->Heap()
-    );
-
-    size_t descriptor = Descriptors::Reserve;
-    for (auto path : m_textureLoadList)
+    // Initialize the sprite batch
     {
-        // Create a texture from the path and tie it to a descriptor
-        size_t slot = m_textureResources->CreateTexture(path, descriptor);
-        TexHand th(descriptor, slot);
-        m_texHands->emplace(path, th);
-        descriptor++;
+        // Create a resource batch to upload the sprite batch. Done seperately to the texture loading as they might happen at seperate times.
+        ResourceUploadBatch resourceUpload(device);
+
+        resourceUpload.Begin();
+
+        auto sampler = m_states->LinearWrap();
+
+        ///<summary>state description used when creating PSO used in the sprite batch</summary>
+        SpriteBatchPipelineStateDescription spd(rtState
+            //);    // Use default 
+            , nullptr, nullptr, nullptr, &sampler); // use specific sampler
+        //,&CommonStates::NonPremultiplied);   // Prevent use of premultiplied alpha, for textures without that
+        m_spriteBatch = std::make_unique<SpriteBatch>(device, resourceUpload, spd);
+
+        //Create a future allowing the upload process to potentially happen on another thread, and wait for the upload to comlete before continuing
+        auto uploadResourcesFinished = resourceUpload.End(
+            m_deviceResources->GetCommandQueue()
+        );
+        uploadResourcesFinished.wait();
     }
 
-    auto sampler = m_states->LinearWrap();
-
-    ///<summary>state description used when creating PSO used in the sprite batch</summary>
-    SpriteBatchPipelineStateDescription spd(rtState
-        //);    // Use default 
-        , nullptr, nullptr, nullptr, &sampler); // use specific sampler
-    //,&CommonStates::NonPremultiplied);   // Prevent use of premultiplied alpha, for textures without that
-    m_spriteBatch = std::make_unique<SpriteBatch>(device, resourceUpload, spd);
-
-    // set position of sprite
-    Microsoft::WRL::ComPtr<ID3D12Resource> cat;
-    auto texHand = m_texHands->find(L"textures/cat.dds")->second;
-    //TODO sanitize if the map does not contain this value
     
-    m_textureResources->GetResource(texHand.slot, cat.ReleaseAndGetAddressOf());
-    XMUINT2 catSize = GetTextureSize(cat.Get());
-    m_origin.x = float(catSize.x / 2);
-    m_origin.y = float(catSize.y / 2);
+    // Instanciate sprites
+    {
+        // set position of sprite
+        Microsoft::WRL::ComPtr<ID3D12Resource> cat;
+        auto texHand = m_texHands->find(L"textures/cat.dds")->second;
+        //TODO sanitize if the map does not contain this value
 
+        m_textureResources->GetResource(texHand.slot, cat.ReleaseAndGetAddressOf());
+        XMUINT2 catSize = GetTextureSize(cat.Get());
+        m_origin.x = float(catSize.x / 2);
+        m_origin.y = float(catSize.y / 2);
+    }
 
-    //Create a future allowing the upload process to potentially happen on another thread, and wait for the upload to comlete before continuing
-    auto uploadResourcesFinished = resourceUpload.End(
-        m_deviceResources->GetCommandQueue()
-    );
-    uploadResourcesFinished.wait();
+    // Initialize the primitive batch used for rendering lit objects 
+    {
+        //Set up primitive batch
+        m_batch = std::make_unique<PrimitiveBatch<VertexType>>(device);
 
+        // create the pipeline description for the Normal effect objects
+        EffectPipelineStateDescription ppd(
+            &VertexType::InputLayout,
+            CommonStates::Opaque,
+            CommonStates::DepthDefault,
+            CommonStates::CullCounterClockwise, //Define CCW winding order
+            rtState
+        );
 
-     
+        // create the basiceffect to use the pipeline description and colored vertices
+        m_effect = std::make_unique<NormalMapEffect>(device, EffectFlags::None, ppd);
+        // Set the texture descriptors for this effect
+        m_effect->SetTexture(m_textureResources->GetGpuDescriptorHandle(m_texHands->at(L"textures/rocks_diff.dds").desc), m_states->LinearClamp());
+        m_effect->SetNormalTexture(m_textureResources->GetGpuDescriptorHandle(m_texHands->at(L"textures/rocks_norm.dds").desc));
 
+        // Enable built in, dot product lighting
+        m_effect->EnableDefaultLighting();
+        m_effect->SetLightDiffuseColor(0, Colors::Gray);
+    }
 
+    // Create the primitive batch used to render wireframe vertices, which are unlit, and use a different vertex type and effect so need their own batch
+    // TODO: make this code more applicable to switching effects by giving it more in common with the other primitive batch
+    {
+        // Set up wireframe batch
+        m_wireframeBatch = std::make_unique<PrimitiveBatch<WireframeVertexType>>(device);
 
-    //Set up primitive batch
-    m_batch = std::make_unique<PrimitiveBatch<VertexType>>(device);
+        // create the pipeline description for the wireframe effect object
+        EffectPipelineStateDescription wpd(
+            &VertexPositionColor::InputLayout,
+            CommonStates::Opaque,
+            CommonStates::DepthDefault,
+            CommonStates::CullNone, //Define CCW winding order
+            rtState,
+            D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE
+        );
 
-    // create the pipeline description for the Normal effect objects
-    EffectPipelineStateDescription ppd(
-        &VertexType::InputLayout,
-        CommonStates::Opaque,
-        CommonStates::DepthDefault,
-        CommonStates::CullCounterClockwise, //Define CCW winding order
-        rtState
-    );
-
-    // create the basiceffect to use the pipeline description and colored vertices
-    m_effect = std::make_unique<NormalMapEffect>(device, EffectFlags::None, ppd);
-    // Set the texture descriptors for this effect
-    m_effect->SetTexture(m_textureResources->GetGpuDescriptorHandle(m_texHands->at(L"textures/rocks_diff.dds").desc), m_states->LinearClamp());
-    m_effect->SetNormalTexture(m_textureResources->GetGpuDescriptorHandle(m_texHands->at(L"textures/rocks_norm.dds").desc));
-
-    // Enable built in, dot product lighting
-    m_effect->EnableDefaultLighting();
-    m_effect->SetLightDiffuseColor(0, Colors::Gray);
-
-
-    // Set up wireframe batch
-    m_wireframeBatch = std::make_unique<PrimitiveBatch<WireframeVertexType>>(device);
-    
-    // create the pipeline description for the wireframe effect object
-    EffectPipelineStateDescription wpd(
-        &VertexPositionColor::InputLayout,
-        CommonStates::Opaque,
-        CommonStates::DepthDefault,
-        CommonStates::CullNone, //Define CCW winding order
-        rtState,
-        D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE
-    );
-
-    // create the wireframe effect from the above description
-    m_wireframeEffect = std::make_unique<BasicEffect>(device, EffectFlags::VertexColor, wpd);
-
+        // create the wireframe effect from the above description
+        m_wireframeEffect = std::make_unique<BasicEffect>(device, EffectFlags::VertexColor, wpd);
+    }
 
 
     //Set up GUI
-    // Create GUI context
-    ImGui::CreateContext();
+    {
+        // Create GUI context
+        ImGui::CreateContext();
 
-    // TODO: Set configuration flags, load fonts, setup style
-    ImGuiIO& io = ImGui::GetIO();
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;   //Enable keyboard controls
-    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;   //Enable docking, as using docking branch
-    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;   //Enable viewports
+        // TODO: Set configuration flags, load fonts, setup style
+        ImGuiIO& io = ImGui::GetIO();
+        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;   //Enable keyboard controls
+        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;   //Enable docking, as using docking branch
+        io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;   //Enable viewports
+        
+        // Initialize platform and rendering backends
+        ImGui_ImplWin32_Init(window);
 
-    // Initialize platform and rendering backends
-    ImGui_ImplWin32_Init(window);
+        // TODO: Initialize DX12 rendering backends
+        ImGui_ImplDX12_Init(
+            device,
+            m_deviceResources->GetBackBufferCount(),
+            m_deviceResources->GetBackBufferFormat(),
+            m_srvPile->Heap(),
+            m_srvPile->GetCpuHandle(Descriptors::Gui),
+            m_srvPile->GetGpuHandle(Descriptors::Gui)
+        );
 
-    // TODO: Initialize DX12 rendering backends
-    ImGui_ImplDX12_Init(
-        device,
-        m_deviceResources->GetBackBufferCount(),
-        m_deviceResources->GetBackBufferFormat(),
-        m_srvPile->Heap(),
-        m_srvPile->GetCpuHandle(Descriptors::Gui),
-        m_srvPile->GetGpuHandle(Descriptors::Gui)
-    );
-
-
-
-    device;
+    }
 }
 
 // Allocate all memory resources that change on a window SizeChanged event.
@@ -559,6 +544,35 @@ void Game::CreateWindowSizeDependentResources()
 
 void Game::LoadTextures()
 {
+    auto device = m_deviceResources->GetD3DDevice();
+
+    ResourceUploadBatch resourceUpload(device);
+
+    resourceUpload.Begin();
+
+    m_texHands = std::make_unique<std::map<const wchar_t*, TexHand>>();
+    // Create the EffectTextureFactory, a helper object to provide sharing of texture resources from the existing reosurce heap
+    m_textureResources = std::make_unique<DirectX::EffectTextureFactory>(
+        device,
+        resourceUpload,
+        m_srvPile->Heap()
+    );
+
+    size_t descriptor = Descriptors::Reserve;
+    for (auto path : m_textureLoadList)
+    {
+        // Create a texture from the path and tie it to a descriptor
+        size_t slot = m_textureResources->CreateTexture(path, descriptor);
+        TexHand th(descriptor, slot);
+        m_texHands->emplace(path, th);
+        descriptor++;
+    }
+
+    //Create a future allowing the upload process to potentially happen on another thread, and wait for the upload to comlete before continuing
+    auto uploadResourcesFinished = resourceUpload.End(
+        m_deviceResources->GetCommandQueue()
+    );
+    uploadResourcesFinished.wait();
 }
 
 void Game::OnDeviceLost()
@@ -574,6 +588,12 @@ void Game::OnDeviceLost()
     m_wireframeBatch.reset();
     m_msaaHelper->ReleaseDevice();
     m_msaaHelper.reset();
+
+    //Clean up textures
+    m_textureLoadList.clear();
+    m_texHands->clear();
+    m_textureResources->ReleaseCache();
+    m_textureResources.reset();
 
     //Clean up GUI
     ImGui_ImplDX12_Shutdown();
