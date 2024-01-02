@@ -6,6 +6,8 @@
 
 #include "DeviceResources.h"
 #include "StepTimer.h"
+#include <map>
+#include <vector>
 
 
 // A basic game implementation that creates a D3D12 device and
@@ -55,6 +57,8 @@ private:
     void CreateDeviceDependentResources();
     void CreateWindowSizeDependentResources();
 
+    void LoadTextures();
+
     // Device resources.
     std::unique_ptr<DX::DeviceResources>    m_deviceResources;
 
@@ -68,22 +72,37 @@ private:
     std::unique_ptr<DirectX::GraphicsMemory> m_graphicsMemory;
 
     /// <summary>Stores and allocates objects needed by shaders</summary>
-    std::unique_ptr<DirectX::DescriptorHeap> m_resourceDescriptors;
-    Microsoft::WRL::ComPtr<ID3D12Resource> m_cat;
-    Microsoft::WRL::ComPtr<ID3D12Resource> m_background;
-    Microsoft::WRL::ComPtr<ID3D12Resource> m_rocks_diff;
-    Microsoft::WRL::ComPtr<ID3D12Resource> m_rocks_norm;
+    std::unique_ptr<DirectX::DescriptorPile> m_srvPile;
+
+    
     RECT m_fullscreenRect;
 
-    // The cat is called Lollipop!
+    /// <summary><para>desc: The Texture's descriptor</para>
+    /// <para>slot: The Texture's slot for accessing it's resource in EffectTextureFactory</para></summary>
+    struct TexHand
+    {
+        size_t desc;
+        size_t slot;
+        /// <param name="desc">The Texture's descriptor</param>
+        /// <param name="slot">The Texture's slot for accessing it's resource in EffectTextureFactory</param>
+        TexHand(size_t desc, size_t slot)
+        {
+            this->desc = desc;
+            this->slot = slot;
+        }
+    };
+
+    std::unique_ptr<DirectX::EffectTextureFactory> m_textureResources;
+    /// <summary>Maps the name of a texture to its handles (slot and descriptor) for use with an EffectTextureFactory.</summary>
+    std::unique_ptr<std::map<const wchar_t*, TexHand>> m_texHands;
+    std::vector<const wchar_t*> m_textureLoadList;
+
+
     enum Descriptors
     {
         Gui,
-        Cat,
-        Background,
-        Rocks_diff,
-        Rocks_norm,
-        Count
+        Reserve,
+        Count = 128
     };
 
     /// <summary>Helper that handles additional D3D resources required for drawing</summary>
