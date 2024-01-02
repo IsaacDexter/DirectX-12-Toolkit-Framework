@@ -5,6 +5,7 @@
 #include "pch.h"
 #include "Game.h"
 
+
 extern void ExitGame() noexcept;
 
 using namespace DirectX;
@@ -153,16 +154,18 @@ void Game::Render()
 
 
     // Draw background texture
+    auto texture = m_textures->GetTexture(L"textures/sunset.dds");
+
     m_spriteBatch->Draw(
-        m_resourceDescriptors->GetGpuHandle(Descriptors::Background),
-        GetTextureSize(m_background.Get()),
+        m_resourceDescriptors->GetGpuHandle(texture->descriptor),
+        GetTextureSize(texture->resource.Get()),
         m_fullscreenRect
     );
 
     // Submit the work of drawing a texture to the command list
     m_spriteBatch->Draw(
-        m_resourceDescriptors->GetGpuHandle(m_catSprite->GetTexture()->descriptor),
-        m_catSprite->GetSize(),
+        m_resourceDescriptors->GetGpuHandle(m_catSprite->texture->descriptor),
+        m_catSprite->size,
         Vector2(50.f, 50.f), nullptr, Colors::White, 0.f  //Screen position, source rect, tint, rotation, origin
     );
 
@@ -374,7 +377,7 @@ void Game::CreateDeviceDependentResources()
     // Create a common states object which provides a descriptor heap with pre-defined sampler descriptors
     m_states = std::make_unique<CommonStates>(device);
 
-    m_resourceDescriptors = std::make_unique<DescriptorHeap>(device, Descriptors::Count);
+    m_resourceDescriptors = std::make_unique<DescriptorPile>(device, Descriptors::Count, Descriptors::Reserve);
 
     //Initialize world matrix
     m_world = Matrix::Identity;
@@ -387,8 +390,10 @@ void Game::CreateDeviceDependentResources()
      // Initialize helper class for uploading textures to GPU
     m_textures = std::make_unique<TextureGroup>(m_deviceResources, m_resourceDescriptors);
 
-
     m_textures->QueueTexture(L"textures/cat.dds");
+    m_textures->QueueTexture(L"textures/rocks_diff.dds");
+    m_textures->QueueTexture(L"textures/rocks_norm.dds");
+    m_textures->QueueTexture(L"textures/sunset.dds");
     m_textures->LoadTextures();
     auto texture = m_textures->GetTexture(L"textures/cat.dds");
     m_catSprite = std::make_unique<Sprite>(texture);
@@ -396,44 +401,6 @@ void Game::CreateDeviceDependentResources()
 
     ResourceUploadBatch resourceUpload(device);
     resourceUpload.Begin();
-
-
-    // Load background texture
-    DX::ThrowIfFailed(CreateWICTextureFromFile(
-        device,
-        resourceUpload, // ResourceUploadBatch to upload texture to GPU
-        L"textures/sunset.jpg", // Path of the texture to load
-        m_background.ReleaseAndGetAddressOf()  // Release the interface associated with comptr and retreieve a pointer to the released interface to store the texture into
-    ));
-    CreateShaderResourceView(
-        device,
-        m_background.Get(),    // Pointer to resource object that represents the Shader Resource
-        m_resourceDescriptors->GetCpuHandle(Descriptors::Background)   // Descriptor handle that represents the SRV 
-    );
-
-    // Load rocks texture
-    DX::ThrowIfFailed(CreateDDSTextureFromFile(
-        device,
-        resourceUpload, // ResourceUploadBatch to upload texture to GPU
-        L"textures/rocks_diff.dds", // Path of the texture to load
-        m_rocks_diff.ReleaseAndGetAddressOf()  // Release the interface associated with comptr and retreieve a pointer to the released interface to store the texture into
-    ));
-    CreateShaderResourceView(
-        device,
-        m_rocks_diff.Get(),    // Pointer to resource object that represents the Shader Resource
-        m_resourceDescriptors->GetCpuHandle(Descriptors::Rocks_diff)   // Descriptor handle that represents the SRV 
-    );
-    DX::ThrowIfFailed(CreateDDSTextureFromFile(
-        device,
-        resourceUpload, // ResourceUploadBatch to upload texture to GPU
-        L"textures/rocks_norm.dds", // Path of the texture to load
-        m_rocks_norm.ReleaseAndGetAddressOf()  // Release the interface associated with comptr and retreieve a pointer to the released interface to store the texture into
-    ));
-    CreateShaderResourceView(
-        device,
-        m_rocks_norm.Get(),    // Pointer to resource object that represents the Shader Resource
-        m_resourceDescriptors->GetCpuHandle(Descriptors::Rocks_norm)   // Descriptor handle that represents the SRV 
-    );
 
     auto sampler = m_states->LinearWrap();
 
@@ -464,13 +431,13 @@ void Game::CreateDeviceDependentResources()
         CommonStates::DepthDefault,
         CommonStates::CullCounterClockwise, //Define CCW winding order
         rtState
-    );
+    ); 
 
     // create the basiceffect to use the pipeline description and colored vertices
     m_effect = std::make_unique<NormalMapEffect>(device, EffectFlags::None, ppd);
     // Set the texture descriptors for this effect
-    m_effect->SetTexture(m_resourceDescriptors->GetGpuHandle(Descriptors::Rocks_diff), m_states->LinearClamp());
-    m_effect->SetNormalTexture(m_resourceDescriptors->GetGpuHandle(Descriptors::Rocks_norm));
+    m_effect->SetTexture(m_resourceDescriptors->GetGpuHandle(m_textures->GetTexture(L"textures/rocks_diff.dds")->descriptor), m_states->LinearClamp());
+    m_effect->SetNormalTexture(m_resourceDescriptors->GetGpuHandle(m_textures->GetTexture(L"textures/rocks_norm.dds")->descriptor));
 
     // Enable built in, dot product lighting
     m_effect->EnableDefaultLighting();
@@ -565,9 +532,6 @@ void Game::OnDeviceLost()
 {
     // TODO: Add Direct3D resource cleanup here.
     m_graphicsMemory.reset();
-    m_background.Reset();
-    m_rocks_diff.Reset();
-    m_rocks_norm.Reset();
     m_resourceDescriptors.reset();
     m_spriteBatch.reset();
     m_states.reset();

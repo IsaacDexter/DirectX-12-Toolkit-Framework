@@ -1,4 +1,4 @@
-#include "SpriteGroup.h"
+#include "TextureGroup.h"
 
 inline void TextureGroup::LoadTexture(const wchar_t* szFileName, DirectX::ResourceUploadBatch& resourceUpload)
 {
@@ -7,8 +7,12 @@ inline void TextureGroup::LoadTexture(const wchar_t* szFileName, DirectX::Resour
 
     // TODO: make thread safe here to avoid duplicate descriptors
     texture->descriptor = m_textures.size();
-    m_textures.emplace(szFileName, texture);
-
+    auto result = m_textures.try_emplace(szFileName, texture);
+    // if a texture with this name already exists, 
+    if (!result.second)
+    {
+        return;
+    }
 
     DX::ThrowIfFailed(DirectX::CreateDDSTextureFromFile(
         device,
@@ -27,7 +31,7 @@ inline void TextureGroup::LoadTexture(const wchar_t* szFileName, DirectX::Resour
 
 TextureGroup::TextureGroup(std::shared_ptr<DX::DeviceResources> deviceResources, std::shared_ptr<DirectX::DescriptorHeap> descriptorHeap)
 {
-	m_textures = std::unordered_map<const wchar_t*, std::shared_ptr<Texture>>();
+	m_textures = std::map<const wchar_t*, std::shared_ptr<Texture>>();
     m_deviceResources = deviceResources;
     m_descriptorHeap = descriptorHeap;
 }

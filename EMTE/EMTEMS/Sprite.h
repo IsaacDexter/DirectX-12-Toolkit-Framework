@@ -2,48 +2,29 @@
 #include "pch.h"
 #include "Texture.h"
 
-class Sprite
+/// <summary>Stores a shared pointer to a texture from TextureGroup, and the position and size of the sprite</summary>
+struct Sprite
 {
-private:
-    std::shared_ptr<Texture> m_texture;
+    std::shared_ptr<Texture> texture;
     /// <summary>The 2D screen position of the 2D sprite.</summary>
-    DirectX::SimpleMath::Vector2 m_position;
-    DirectX::XMUINT2 m_size;
-
-private:
-    ///// <summary><para>Using an existing resourceUpload batch, load a texture from a file name and set it as this device's texture</para>
-    ///// <para>Not recommended, load textures seperately in their own batch</para></summary>
-    ///// <param name="device">pointer to the ID3D12Device used to load the texture.</param>
-    ///// <param name="resourceUpload">ResourceUpload that has already begun, and is to be ended seperately after a bulk of sprites are loaded.</param>
-    ///// <param name="szFileName">The path to the dds texture to be loaded</param>
-    //void LoadTexture(ID3D12Device* device, DirectX::ResourceUploadBatch& resourceUpload, const wchar_t* szFileName);
-    
-    inline void SetSize();
-public:
-    inline std::shared_ptr<Texture> GetTexture()
+    DirectX::SimpleMath::Vector2 position;
+    DirectX::XMUINT2 size;
+    Sprite()
     {
-        return m_texture;
+        texture = nullptr;
+        position = DirectX::SimpleMath::Vector2::Zero;
+        size = DirectX::XMUINT2();
     }
-    inline void SetSize(UINT x, UINT y)
+    Sprite(std::shared_ptr<Texture> texture)
     {
-        m_size = DirectX::XMUINT2(x, y);
+        this->texture = texture;
+        position = DirectX::SimpleMath::Vector2::Zero;
+        ResetSize();
     }
-    inline const DirectX::XMUINT2& GetSize()
+    /// <summary>Set the size to that of the texture</summary>
+    inline void ResetSize()
     {
-        return m_size;
+        size = DirectX::GetTextureSize(texture->resource.Get());
     }
-    /// <summary>A sprite is a 2D image of a given size and position with on the screen that displays a texture.</summary>
-    /// <param name="device">pointer to the ID3D12Device used to load the texture.</param>
-    /// <param name="descriptorHeap">Descriptor heap used to store the descriptors to the SRV in the CPU</param>
-    Sprite(std::shared_ptr<Texture> texture);
-    ///// <summary><para>Creates a sprite by loading its texture from a given path.</para>
-    ///// <para>Not recommended, load textures seperately in their own batch</para></summary>
-    ///// <param name="device">pointer to the ID3D12Device used to load the texture.</param>
-    ///// <param name="resourceUpload">ResourceUpload that has already begun, and is to be ended seperately after a bulk of sprites are loaded.</param>
-    ///// <param name="szFileName">The path to the dds texture to be loaded</param>
-    //Sprite(ID3D12Device* device, DirectX::ResourceUploadBatch& resourceUpload, const wchar_t* szFileName, std::unique_ptr<DirectX::DescriptorHeap> descriptorHeap);
-    
-    ~Sprite();
-
 };
 

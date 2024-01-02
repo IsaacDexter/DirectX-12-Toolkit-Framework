@@ -6,7 +6,10 @@
 
 #include "DeviceResources.h"
 #include "StepTimer.h"
-#include "SpriteGroup.h"
+#include "TextureGroup.h"
+#include "Sprite.h"
+
+// Forward declarations
 
 
 // A basic game implementation that creates a D3D12 device and
@@ -70,22 +73,16 @@ private:
 
     /// <summary>Stores and allocates objects needed by shaders</summary>
     std::shared_ptr<DirectX::DescriptorHeap> m_resourceDescriptors;
-    Microsoft::WRL::ComPtr<ID3D12Resource> m_background;
-    Microsoft::WRL::ComPtr<ID3D12Resource> m_rocks_diff;
-    Microsoft::WRL::ComPtr<ID3D12Resource> m_rocks_norm;
     RECT m_fullscreenRect;
 
     std::unique_ptr<TextureGroup> m_textures;
 
-    // The cat is called Lollipop!
+    // Reserve a section of the descriptors to use as static, and reserve the other section to use as dynamic
     enum Descriptors
     {
-        Cat,
-        Background,
-        Rocks_diff,
-        Rocks_norm,
         Gui,
-        Count
+        Reserve,
+        Count = 128
     };
 
     /// <summary>Helper that handles additional D3D resources required for drawing</summary>
