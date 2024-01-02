@@ -95,7 +95,6 @@
 #include "Keyboard.h"
 #include "Model.h"
 #include "Mouse.h"
-#include "DirectXTK/MSAAHelper.h"
 #include "PostProcess.h"
 #include "PrimitiveBatch.h"
 #include "RenderTargetState.h"

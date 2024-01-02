@@ -124,9 +124,6 @@ private:
     std::unique_ptr<DirectX::BasicEffect> m_wireframeEffect;
     std::unique_ptr<DirectX::PrimitiveBatch<WireframeVertexType>> m_wireframeBatch;
     
-    // DXTK Helper class to simplify MSAA, available at https://github.com/microsoft/DirectXTK12/wiki/MSAAHelper
-    std::unique_ptr<DX::MSAAHelper> m_msaaHelper;
-    
     DirectX::SimpleMath::Matrix m_world;
     DirectX::SimpleMath::Matrix m_view;
     DirectX::SimpleMath::Matrix m_proj;
