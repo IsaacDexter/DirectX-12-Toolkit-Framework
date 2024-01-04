@@ -28,21 +28,16 @@
 // WinHelp is deprecated
 #define NOHELP
 
-#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
-#endif
-
 #include <Windows.h>
 
-#include <wrl/client.h>
-#include <wrl/event.h>
-
-#include <grdk.h>
-
-#if _GRDK_VER < 0x55F00C58 /* GDK Edition 220300 */
-#error This project requires the March 2022 GDK or later
+#ifdef __MINGW32__
+#include <unknwn.h>
 #endif
 
+#include <wrl/client.h>
+
+#define USING_DIRECTX_HEADERS
 #ifdef USING_DIRECTX_HEADERS
 #include <directx/dxgiformat.h>
 #include <directx/d3d12.h>
@@ -76,10 +71,6 @@
 #ifdef _DEBUG
 #include <dxgidebug.h>
 #endif
-
-#include <pix3.h>
-
-#include <XGameRuntime.h>
 
 //DirectXTK 12 Headers
 #include "BufferHelpers.h"
@@ -135,8 +126,62 @@ namespace DX
     {
         if (FAILED(hr))
         {
-            // Set a breakpoint on this line to catch DirectX API errors
             throw com_exception(hr);
         }
     }
 }
+
+#ifdef __MINGW32__
+namespace Microsoft
+{
+    namespace WRL
+    {
+        namespace Wrappers
+        {
+            class Event
+            {
+            public:
+                Event() noexcept : m_handle{} {}
+                explicit Event(HANDLE h) noexcept : m_handle{ h } {}
+                ~Event() { if (m_handle) { ::CloseHandle(m_handle); m_handle = nullptr; } }
+
+                void Attach(HANDLE h) noexcept
+                {
+                    if (h != m_handle)
+                    {
+                        if (m_handle) ::CloseHandle(m_handle);
+                        m_handle = h;
+                    }
+                }
+
+                bool IsValid() const { return m_handle != nullptr; }
+                HANDLE Get() const { return m_handle; }
+
+            private:
+                HANDLE m_handle;
+            };
+        }
+    }
+}
+#else
+#include <wrl/event.h>
+#endif
+
+#ifdef __MINGW32__
+constexpr UINT PIX_COLOR_DEFAULT = 0;
+
+inline void PIXBeginEvent(UINT64, PCWSTR) {}
+
+template<typename T>
+inline void PIXBeginEvent(T*, UINT64, PCWSTR) {}
+
+inline void PIXEndEvent() {}
+
+template<typename T>
+inline void PIXEndEvent(T*) {}
+#else
+// To use graphics and CPU markup events with the latest version of PIX, change this to include <pix3.h>
+// then add the NuGet package WinPixEventRuntime to the project.
+#include <pix.h>
+#endif
+

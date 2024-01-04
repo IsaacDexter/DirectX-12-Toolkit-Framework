@@ -6,8 +6,7 @@
 
 #include "DeviceResources.h"
 #include "StepTimer.h"
-#include <map>
-#include <vector>
+#include "map"
 
 
 // A basic game implementation that creates a D3D12 device and
@@ -60,21 +59,20 @@ private:
     void LoadTextures();
 
     // Device resources.
-    std::unique_ptr<DX::DeviceResources>    m_deviceResources;
+    std::unique_ptr<DX::DeviceResources>        m_deviceResources;
 
     // Rendering loop timer.
-    DX::StepTimer                           m_timer;
-    /// <summary>
-    /// <para>Manages video memory  allocations</para>
+    DX::StepTimer                               m_timer;
+
+    /// <summary><para>Manages video memory  allocations</para>
     /// <para>Call commit after presenting buffers to track and free memory</para>
-    /// <para>Ensure initialization when creating resources</para>
-    /// </summary>
+    /// <para>Ensure initialization when creating resources</para></summary>
     std::unique_ptr<DirectX::GraphicsMemory> m_graphicsMemory;
 
     /// <summary>Stores and allocates objects needed by shaders</summary>
     std::unique_ptr<DirectX::DescriptorPile> m_srvPile;
 
-    
+
     RECT m_fullscreenRect;
 
     /// <summary><para>desc: The Texture's descriptor</para>
@@ -123,7 +121,7 @@ private:
     using WireframeVertexType = DirectX::VertexPositionColor;
     std::unique_ptr<DirectX::BasicEffect> m_wireframeEffect;
     std::unique_ptr<DirectX::PrimitiveBatch<WireframeVertexType>> m_wireframeBatch;
-    
+
     DirectX::SimpleMath::Matrix m_world;
     DirectX::SimpleMath::Matrix m_view;
     DirectX::SimpleMath::Matrix m_proj;

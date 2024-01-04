@@ -43,7 +43,7 @@ void Game::Initialize(HWND window, int width, int height)
     m_deviceResources->CreateWindowSizeDependentResources();
     CreateWindowSizeDependentResources();
 
-    
+
 
     // TODO: Change the timer settings if you want something other than the default variable timestep mode.
     // e.g. for 60 FPS fixed timestep update logic, call:
@@ -125,7 +125,7 @@ void Game::Render()
 
 
 
-    
+
 
     // Render sprites
 
@@ -356,7 +356,7 @@ void Game::CreateDeviceDependentResources()
     ///<summary>wraps information concerning render target used by DX12 when creating Pipeline State Objects</summary>
     RenderTargetState rtState(
         m_deviceResources->GetBackBufferFormat(),
-        m_deviceResources->GetDepthBufferFormat()    
+        m_deviceResources->GetDepthBufferFormat()
     );
 
     // Create a common states object which provides a descriptor heap with pre-defined sampler descriptors
@@ -392,7 +392,7 @@ void Game::CreateDeviceDependentResources()
         uploadResourcesFinished.wait();
     }
 
-    
+
     // Instanciate sprites
     {
         // set position of sprite
@@ -462,7 +462,7 @@ void Game::CreateDeviceDependentResources()
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;   //Enable keyboard controls
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;   //Enable docking, as using docking branch
         io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;   //Enable viewports
-        
+
         // Initialize platform and rendering backends
         ImGui_ImplWin32_Init(window);
 
@@ -489,7 +489,7 @@ void Game::CreateWindowSizeDependentResources()
 
     auto size = m_deviceResources->GetOutputSize();
 
-    
+
     //Initialize Matrices 
     m_view = Matrix::CreateLookAt(
         Vector3(0.0f, 2.f, 2.f), //Camera position
@@ -504,8 +504,8 @@ void Game::CreateWindowSizeDependentResources()
     );
 
     m_effect->SetView(m_view);
-    m_effect->SetProjection(m_proj); 
-    
+    m_effect->SetProjection(m_proj);
+
     m_wireframeEffect->SetView(m_view);
     m_wireframeEffect->SetProjection(m_proj);
 
