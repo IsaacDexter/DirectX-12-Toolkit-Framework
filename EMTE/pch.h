@@ -72,8 +72,35 @@
 #include <dxgidebug.h>
 #endif
 
-// If using the DirectX Tool Kit for DX12, uncomment this line:
-//#include "GraphicsMemory.h"
+//DirectXTK 12 Headers
+#include "BufferHelpers.h"
+#include "CommonStates.h"
+#include "DDSTextureLoader.h"
+#include "DescriptorHeap.h"
+#include "DirectXHelpers.h"
+#include "EffectPipelineStateDescription.h"
+#include "Effects.h"
+#include "GamePad.h"
+#include "GeometricPrimitive.h"
+#include "GraphicsMemory.h"
+#include "Keyboard.h"
+#include "Model.h"
+#include "Mouse.h"
+#include "PostProcess.h"
+#include "PrimitiveBatch.h"
+#include "RenderTargetState.h"
+#include "ResourceUploadBatch.h"
+#include "ScreenGrab.h"
+#include "SimpleMath.h"
+#include "SpriteBatch.h"
+#include "SpriteFont.h"
+#include "VertexTypes.h"
+#include "WICTextureLoader.h"
+
+// ImGui Headers
+#include "imgui.h"
+#include "imgui_impl_dx12.h"
+#include "imgui_impl_win32.h"
 
 namespace DX
 {
