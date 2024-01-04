@@ -2,3 +2,6 @@
 	path = EMTE/ImGui
 	url = https://github.com/ocornut/imgui.git
 	branch = docking
+[submodule "EMTE/DirectX-Graphics-Samples"]
+	path = EMTE/DirectX-Graphics-Samples
+	url = https://github.com/microsoft/DirectX-Graphics-Samples.git
