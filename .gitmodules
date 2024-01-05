@@ -2,9 +2,3 @@
 	path = EMTE/ImGui
 	url = https://github.com/ocornut/imgui.git
 	branch = docking
-[submodule "EMTE/DirectX-Headers"]
-	path = EMTE/DirectX-Headers
-	url = https://github.com/microsoft/DirectX-Headers.git
-[submodule "EMTE/DirectXTK12"]
-	path = EMTE/DirectXTK12
-	url = https://github.com/microsoft/DirectXTK12.git
