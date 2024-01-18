@@ -81,6 +81,93 @@ void Game::Update(DX::StepTimer const& timer)
     float time = float(m_timer.GetTotalSeconds());
     // TODO: Add your game logic here.
 
+    // handle mouse input
+    auto mouse = m_mouse->GetState();
+
+    if (mouse.positionMode == Mouse::MODE_RELATIVE)
+    {
+        Vector3 delta = Vector3(float(mouse.x), float(mouse.y), 0.f)
+            * m_rotationGain * elapsedTime;
+
+        m_pitch -= delta.y;
+        m_yaw -= delta.x;
+    }
+
+    m_mouse->SetMode(mouse.leftButton
+        ? Mouse::MODE_RELATIVE : Mouse::MODE_ABSOLUTE);
+
+
+
+    auto kb = m_keyboard->GetState();
+    // handle user input
+    if (kb.Escape)
+    {
+        ExitGame();
+    }
+    if (kb.Home)
+    {
+        // reset camera position and rotation
+        m_cameraPos = m_startPos;
+        m_pitch = m_yaw = 0;
+    }
+
+    // move the camera in response to keyboard input
+    Vector3 move = Vector3::Zero;
+
+    if (kb.Up || kb.W)
+        move.z += 1.f;
+
+    if (kb.Down || kb.S)
+        move.z -= 1.f;
+
+    if (kb.Left || kb.A)
+        move.x += 1.f;
+
+    if (kb.Right || kb.D)
+        move.x -= 1.f;
+
+    if (kb.PageUp || kb.Space)
+        move.y += 1.f;
+
+    if (kb.PageDown || kb.X)
+        move.y -= 1.f;
+
+    Quaternion q = Quaternion::CreateFromYawPitchRoll(m_yaw, m_pitch, 0.f);
+    move = Vector3::Transform(move, q);
+    move *= m_movementGain * elapsedTime;
+    m_cameraPos += move;
+
+
+
+
+    // update the camera positon
+
+        // limit pitch to straight up or straight down
+    constexpr float limit = XM_PIDIV2 - 0.01f;
+    m_pitch = std::max(-limit, m_pitch);
+    m_pitch = std::min(+limit, m_pitch);
+
+    // keep longitude in sane range by wrapping
+    if (m_yaw > XM_PI)
+    {
+        m_yaw -= XM_2PI;
+    }
+    else if (m_yaw < -XM_PI)
+    {
+        m_yaw += XM_2PI;
+    }
+
+    float y = sinf(m_pitch);
+    float r = cosf(m_pitch);
+    float z = r * cosf(m_yaw);
+    float x = r * sinf(m_yaw);
+
+    XMVECTOR lookAt = m_cameraPos + Vector3(x, y, z);
+    m_view = XMMatrixLookAtRH(m_cameraPos, lookAt, Vector3::Up);
+    
+    char buffer[500];
+    sprintf_s(buffer, "\nm_cameraPos = (%f, %f, %f)\nm_cameraLookAt = (%f, %f, %f)", m_cameraPos.x, m_cameraPos.y, m_cameraPos.z, x, y, z);
+    OutputDebugStringA(buffer);
 
     //Rotate the light based on elapsed time
     auto quat = Quaternion::CreateFromAxisAngle(Vector3::UnitY, time);
@@ -89,13 +176,14 @@ void Game::Update(DX::StepTimer const& timer)
 
     m_effect->SetLightDirection(0, light);
 
-    m_world = Matrix::CreateRotationY(sinf(time));
+
 
 
     elapsedTime;
 
     PIXEndEvent();
 }
+
 #pragma endregion
 
 #pragma region Frame Render
@@ -165,9 +253,17 @@ void Game::Render()
 
 
     // Render primitives
+    m_effect->SetView(m_view);
+    m_effect->SetProjection(m_proj);
+
+    m_wireframeEffect->SetView(m_view);
+    m_wireframeEffect->SetProjection(m_proj);
+
 
     // Apply wireframe effect
     m_wireframeEffect->SetWorld(m_world);
+    
+
     m_wireframeEffect->Apply(commandList);
 
     m_wireframeBatch->Begin(commandList);
@@ -207,14 +303,18 @@ void Game::Render()
     // apply the basic effect
     // Set matrices
     m_effect->SetWorld(m_world);
+    
+
     m_effect->Apply(commandList);
+
+    m_shape->Draw(commandList);
 
     // Start batch of primitive drawing operations
     m_batch->Begin(commandList);
 
     VertexType v1(Vector3(0.0f, 1.f, 0.f), -Vector3::UnitZ, Vector2(0.5f, 0.f));
-    VertexType v2(Vector3(1.f, -1.f, 0.f), -Vector3::UnitZ, Vector2(1.f, 1.f));
     VertexType v3(Vector3(-1.f, -1.f, 0.f), -Vector3::UnitZ, Vector2(0.f, 1.f));
+    VertexType v2(Vector3(1.f, -1.f, 0.f), -Vector3::UnitZ, Vector2(1.f, 1.f));
 
     m_batch->DrawTriangle(v1, v2, v3);
 
@@ -336,6 +436,19 @@ void Game::CreateDeviceDependentResources()
     auto device = m_deviceResources->GetD3DDevice();
     auto window = m_deviceResources->GetWindow();
 
+    // set up input devices and bind them to the window
+    m_keyboard = std::make_unique<Keyboard>();
+    m_mouse = std::make_unique<Mouse>();
+
+    m_mouse->SetWindow(window);
+    
+    //set up camera variables
+    m_pitch = 0.0f;
+    m_yaw = 0.0f;
+
+    m_cameraPos = m_startPos;
+
+
     // Check Shader Model 6 support
     D3D12_FEATURE_DATA_SHADER_MODEL shaderModel = { D3D_SHADER_MODEL_6_0 };
     if (FAILED(device->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &shaderModel, sizeof(shaderModel)))
@@ -369,28 +482,8 @@ void Game::CreateDeviceDependentResources()
 
     LoadTextures();
 
-    // Initialize the sprite batch
-    {
-        // Create a resource batch to upload the sprite batch. Done seperately to the texture loading as they might happen at seperate times.
-        ResourceUploadBatch resourceUpload(device);
+    // create render texture, used for the portal
 
-        resourceUpload.Begin();
-
-        auto sampler = m_states->LinearWrap();
-
-        ///<summary>state description used when creating PSO used in the sprite batch</summary>
-        SpriteBatchPipelineStateDescription spd(rtState
-            //);    // Use default 
-            , nullptr, nullptr, nullptr, &sampler); // use specific sampler
-        //,&CommonStates::NonPremultiplied);   // Prevent use of premultiplied alpha, for textures without that
-        m_spriteBatch = std::make_unique<SpriteBatch>(device, resourceUpload, spd);
-
-        //Create a future allowing the upload process to potentially happen on another thread, and wait for the upload to comlete before continuing
-        auto uploadResourcesFinished = resourceUpload.End(
-            m_deviceResources->GetCommandQueue()
-        );
-        uploadResourcesFinished.wait();
-    }
 
 
     // Instanciate sprites
@@ -413,7 +506,7 @@ void Game::CreateDeviceDependentResources()
 
         // create the pipeline description for the Normal effect objects
         EffectPipelineStateDescription ppd(
-            &VertexType::InputLayout,
+            &GeometricPrimitive::VertexType::InputLayout,
             CommonStates::Opaque,
             CommonStates::DepthDefault,
             CommonStates::CullCounterClockwise, //Define CCW winding order
@@ -421,14 +514,32 @@ void Game::CreateDeviceDependentResources()
         );
 
         // create the basiceffect to use the pipeline description and colored vertices
-        m_effect = std::make_unique<NormalMapEffect>(device, EffectFlags::None, ppd);
+        // utilize built in normal effect, per pixel lighting and use of textures
+        m_effect = std::make_unique<NormalMapEffect>(device, EffectFlags::PerPixelLighting | EffectFlags::Texture, ppd);
         // Set the texture descriptors for this effect
         m_effect->SetTexture(m_textureResources->GetGpuDescriptorHandle(m_texHands->at(L"textures/rocks_diff.dds").desc), m_states->LinearClamp());
         m_effect->SetNormalTexture(m_textureResources->GetGpuDescriptorHandle(m_texHands->at(L"textures/rocks_norm.dds").desc));
 
-        // Enable built in, dot product lighting
-        m_effect->EnableDefaultLighting();
-        m_effect->SetLightDiffuseColor(0, Colors::Gray);
+        // enable the first light in the scene
+        m_effect->SetLightEnabled(0, true);
+        m_effect->SetLightDiffuseColor(0, Colors::White);
+        m_effect->SetLightDirection(0, -Vector3::UnitZ);
+    
+        // instanciate geometric primitive
+        m_shape = GeometricPrimitive::CreateSphere();
+
+        ResourceUploadBatch resourceUpload(device);
+
+        resourceUpload.Begin();
+
+        // Load geometric primitive data into the dedicated video memory for faster performance
+        m_shape->LoadStaticBuffers(device, resourceUpload);
+
+        //Create a future allowing the upload process to potentially happen on another thread, and wait for the upload to comlete before continuing
+        auto uploadResourcesFinished = resourceUpload.End(
+            m_deviceResources->GetCommandQueue()
+        );
+        uploadResourcesFinished.wait();
     }
 
     // Create the primitive batch used to render wireframe vertices, which are unlit, and use a different vertex type and effect so need their own batch
@@ -451,6 +562,28 @@ void Game::CreateDeviceDependentResources()
         m_wireframeEffect = std::make_unique<BasicEffect>(device, EffectFlags::VertexColor, wpd);
     }
 
+    // Initialize the sprite batch
+    {
+        // Create a resource batch to upload the sprite batch. Done seperately to the texture loading as they might happen at seperate times.
+        ResourceUploadBatch resourceUpload(device);
+
+        resourceUpload.Begin();
+
+        auto sampler = m_states->LinearWrap();
+
+        ///<summary>state description used when creating PSO used in the sprite batch</summary>
+        SpriteBatchPipelineStateDescription spd(rtState
+            //);    // Use default 
+            , nullptr, nullptr, nullptr, &sampler); // use specific sampler
+        //,&CommonStates::NonPremultiplied);   // Prevent use of premultiplied alpha, for textures without that
+        m_spriteBatch = std::make_unique<SpriteBatch>(device, resourceUpload, spd);
+
+        //Create a future allowing the upload process to potentially happen on another thread, and wait for the upload to comlete before continuing
+        auto uploadResourcesFinished = resourceUpload.End(
+            m_deviceResources->GetCommandQueue()
+        );
+        uploadResourcesFinished.wait();
+    }
 
     //Set up GUI
     {
@@ -492,15 +625,15 @@ void Game::CreateWindowSizeDependentResources()
 
     //Initialize Matrices 
     m_view = Matrix::CreateLookAt(
-        Vector3(0.0f, 2.f, 2.f), //Camera position
+        Vector3(m_cameraPos), //Camera position
         Vector3::Zero,  //Camera target
-        Vector3::UnitY  //Camera up vector
+        Vector3::Up  //Camera up vector
     );
     m_proj = Matrix::CreatePerspectiveFieldOfView(
         XM_PI / 4.f,
         float(size.right) / float(size.bottom),
         0.1f,
-        10.f
+        100.f
     );
 
     m_effect->SetView(m_view);
@@ -567,6 +700,8 @@ void Game::OnDeviceLost()
     ImGui_ImplDX12_Shutdown();
     ImGui_ImplWin32_Shutdown();
     ImGui::DestroyContext();
+
+    m_shape.reset();
 }
 
 void Game::OnDeviceRestored()

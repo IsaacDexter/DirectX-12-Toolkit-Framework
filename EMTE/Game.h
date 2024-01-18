@@ -49,6 +49,7 @@ public:
 private:
 
     void Update(DX::StepTimer const& timer);
+
     void Render();
 
     void Clear();
@@ -103,6 +104,12 @@ private:
         Count = 128
     };
 
+    enum RTDescriptors
+    {
+        OffscreenRT,
+        RTCount
+    };
+
     /// <summary>Helper that handles additional D3D resources required for drawing</summary>
     std::unique_ptr<DirectX::SpriteBatch> m_spriteBatch;
 
@@ -122,7 +129,28 @@ private:
     std::unique_ptr<DirectX::BasicEffect> m_wireframeEffect;
     std::unique_ptr<DirectX::PrimitiveBatch<WireframeVertexType>> m_wireframeBatch;
 
+    // world view and projection matrices
     DirectX::SimpleMath::Matrix m_world;
     DirectX::SimpleMath::Matrix m_view;
     DirectX::SimpleMath::Matrix m_proj;
+    
+    // camera values
+    float m_pitch;
+    float m_yaw;
+    DirectX::SimpleMath::Vector3 m_cameraPos;
+    float m_rotationGain = 0.1;
+    float m_movementGain = 1.0f;
+    DirectX::SimpleMath::Vector3 m_startPos = { 0.0f, 2.f, 2.f };
+    
+
+    // geometric primitive for rendering simple sphere
+    std::unique_ptr<DirectX::GeometricPrimitive> m_shape;
+
+    // rendering to texture
+    std::unique_ptr<DirectX::DescriptorHeap> m_renderDescriptors;
+    std::unique_ptr<DX::RenderTexture> m_renderTexture;
+
+    // keyboard and mouse input
+    std::unique_ptr<DirectX::Keyboard> m_keyboard;
+    std::unique_ptr<DirectX::Mouse> m_mouse;
 };
