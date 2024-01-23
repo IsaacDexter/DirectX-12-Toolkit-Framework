@@ -81,6 +81,96 @@ void Game::Update(DX::StepTimer const& timer)
     float time = float(m_timer.GetTotalSeconds());
     // TODO: Add your game logic here.
 
+<<<<<<< Updated upstream
+=======
+    // handle mouse input
+    auto mouse = m_mouse->GetState();
+
+    if (mouse.positionMode == Mouse::MODE_RELATIVE)
+    {
+        Vector3 delta = Vector3(float(mouse.x), float(mouse.y), 0.f)
+            * m_rotationGain * elapsedTime;
+
+        m_pitch -= delta.y;
+        m_yaw -= delta.x;
+    }
+
+    m_mouse->SetMode(mouse.leftButton
+        ? Mouse::MODE_RELATIVE : Mouse::MODE_ABSOLUTE);
+
+
+
+    auto kb = m_keyboard->GetState();
+    // handle user input
+    if (kb.Escape)
+    {
+        ExitGame();
+    }
+    if (kb.Home)
+    {
+        // reset camera position and rotation
+        m_cameraPos = m_startPos;
+        m_pitch = m_yaw = 0;
+    }
+
+    // move the camera in response to keyboard input
+    Vector3 move = Vector3::Zero;
+
+    if (kb.Up || kb.W)
+        move.z += 1.f;
+
+    if (kb.Down || kb.S)
+        move.z -= 1.f;
+
+    if (kb.Left || kb.A)
+        move.x += 1.f;
+
+    if (kb.Right || kb.D)
+        move.x -= 1.f;
+
+    if (kb.PageUp || kb.Space)
+        move.y += 1.f;
+
+    if (kb.PageDown || kb.X)
+        move.y -= 1.f;
+
+    Quaternion q = Quaternion::CreateFromYawPitchRoll(m_yaw, 0.f, 0.f);
+    move = Vector3::Transform(move, q);
+    move *= m_movementGain * elapsedTime;
+    m_cameraPos += move;
+
+
+
+
+    // update the camera positon
+
+        // limit pitch to straight up or straight down
+    constexpr float limit = XM_PIDIV2 - 0.01f;
+    m_pitch = std::max(-limit, m_pitch);
+    m_pitch = std::min(+limit, m_pitch);
+
+    // keep longitude in sane range by wrapping
+    if (m_yaw > XM_PI)
+    {
+        m_yaw -= XM_2PI;
+    }
+    else if (m_yaw < -XM_PI)
+    {
+        m_yaw += XM_2PI;
+    }
+
+    float y = sinf(m_pitch);
+    float r = cosf(m_pitch);
+    float z = r * cosf(m_yaw);
+    float x = r * sinf(m_yaw);
+
+    XMVECTOR lookAt = m_cameraPos + Vector3(x, y, z);
+    m_view = XMMatrixLookAtRH(m_cameraPos, lookAt, Vector3::Up);
+    /*
+    char buffer[500];
+    sprintf_s(buffer, "\nm_cameraPos = (%f, %f, %f)\nm_cameraLookAt = (%f, %f, %f)", m_cameraPos.x, m_cameraPos.y, m_cameraPos.z, x, y, z);
+    OutputDebugStringA(buffer);*/
+>>>>>>> Stashed changes
 
     //Rotate the light based on elapsed time
     auto quat = Quaternion::CreateFromAxisAngle(Vector3::UnitY, time);
@@ -111,6 +201,9 @@ void Game::Render()
     // Prepare the command list to render a new frame.
     m_deviceResources->Prepare();
     auto commandList = m_deviceResources->GetCommandList();
+
+    m_renderTexture->BeginScene(commandList);
+
     Clear();
 
     PIXBeginEvent(commandList, PIX_COLOR_DEFAULT, L"Render");
@@ -221,7 +314,7 @@ void Game::Render()
     // Cease this batch of primitive drawing operations
     m_batch->End();
 
-
+    m_renderTexture->EndScene(commandList);
 
     //Render GUI
     ImGuiIO& io = ImGui::GetIO();
@@ -238,6 +331,22 @@ void Game::Render()
 
 
 
+
+    // render scene to offscreen texture
+    auto rtvDescriptor = m_deviceResources->GetRenderTargetView();
+    commandList->OMSetRenderTargets(1, &rtvDescriptor, FALSE, nullptr);
+
+    // Begin the batch of sprite drawing operations
+    m_spriteBatch->Begin(commandList);
+
+    m_spriteBatch->Draw(
+        m_srvPile->GetGpuHandle(Descriptors::RenderTexture),
+        GetTextureSize(m_renderTexture->GetResource()),
+        m_deviceResources->GetOutputSize()
+    );
+
+    // Begin the batch of sprite drawing operations
+    m_spriteBatch->End();
 
     PIXEndEvent(commandList);
 
@@ -257,14 +366,19 @@ void Game::Clear()
     PIXBeginEvent(commandList, PIX_COLOR_DEFAULT, L"Clear");
 
     // Clear the views.
-    // render to the render target and depth/stencil buffer
-    auto const rtvDescriptor = m_deviceResources->GetRenderTargetView();
-    auto const dsvDescriptor = m_deviceResources->GetDepthStencilView();
+    {
+        // render to the render target and depth/stencil buffer
+        // clear the offscreen render target
+        auto const rtvDescriptor = m_renderDescriptors->GetCpuHandle(RTDescriptors::OffscreenRT);
+        //auto const rtvDescriptor = m_deviceResources->GetRenderTargetView();
+        auto const dsvDescriptor = m_deviceResources->GetDepthStencilView();
 
-    commandList->OMSetRenderTargets(1, &rtvDescriptor, FALSE, &dsvDescriptor);
-    commandList->ClearRenderTargetView(rtvDescriptor, Colors::CornflowerBlue, 0, nullptr);
-    commandList->ClearDepthStencilView(dsvDescriptor, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
-
+        commandList->OMSetRenderTargets(1, &rtvDescriptor, FALSE, &dsvDescriptor);
+        //commandList->ClearRenderTargetView(rtvDescriptor, Colors::CornflowerBlue, 0, nullptr);
+        // Clear the offscreen RT
+        m_renderTexture->Clear(commandList);
+        commandList->ClearDepthStencilView(dsvDescriptor, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+    }
     // Set the viewport and scissor rect.
     auto const viewport = m_deviceResources->GetScreenViewport();
     auto const scissorRect = m_deviceResources->GetScissorRect();
@@ -363,12 +477,107 @@ void Game::CreateDeviceDependentResources()
     m_states = std::make_unique<CommonStates>(device);
 
     m_srvPile = std::make_unique<DescriptorPile>(device, Descriptors::Count, Descriptors::Reserve);
+    
+    // Create render descriptor heap to store render target views
+    m_renderDescriptors = std::make_unique<DescriptorHeap>(device, D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12_DESCRIPTOR_HEAP_FLAGS::D3D12_DESCRIPTOR_HEAP_FLAG_NONE, RTDescriptors::RTCount);
+
+
 
     //Initialize world matrix
     m_world = Matrix::Identity;
 
     LoadTextures();
 
+<<<<<<< Updated upstream
+=======
+    // create render texture, used for the portal
+    // Create a render texture of the same size and foramt as the swapchain
+    m_renderTexture = std::make_unique<DX::RenderTexture>(m_deviceResources->GetBackBufferFormat());
+    // Set optimized clear colour
+    m_renderTexture->SetClearColor(Colors::CornflowerBlue);
+    m_renderTexture->SetDevice(
+        device,
+        m_srvPile->GetCpuHandle(Descriptors::RenderTexture),
+        m_renderDescriptors->GetCpuHandle(RTDescriptors::OffscreenRT)
+    );
+
+    // Instanciate sprites
+    {
+        // set position of sprite
+        Microsoft::WRL::ComPtr<ID3D12Resource> cat;
+        auto texHand = m_texHands->find(L"textures/cat.dds")->second;
+        //TODO sanitize if the map does not contain this value
+
+        m_textureResources->GetResource(texHand.slot, cat.ReleaseAndGetAddressOf());
+        XMUINT2 catSize = GetTextureSize(cat.Get());
+        m_origin.x = float(catSize.x / 2);
+        m_origin.y = float(catSize.y / 2);
+    }
+
+    // Initialize the primitive batch used for rendering lit objects 
+    {
+        //Set up primitive batch
+        m_batch = std::make_unique<PrimitiveBatch<VertexType>>(device);
+
+        // create the pipeline description for the Normal effect objects
+        EffectPipelineStateDescription ppd(
+            &GeometricPrimitive::VertexType::InputLayout,
+            CommonStates::Opaque,
+            CommonStates::DepthDefault,
+            CommonStates::CullCounterClockwise, //Define CCW winding order
+            rtState
+        );
+
+        // create the basiceffect to use the pipeline description and colored vertices
+        // utilize built in normal effect, per pixel lighting and use of textures
+        m_effect = std::make_unique<NormalMapEffect>(device, EffectFlags::PerPixelLighting | EffectFlags::Texture, ppd);
+        // Set the texture descriptors for this effect
+        m_effect->SetTexture(m_textureResources->GetGpuDescriptorHandle(m_texHands->at(L"textures/rocks_diff.dds").desc), m_states->LinearClamp());
+        m_effect->SetNormalTexture(m_textureResources->GetGpuDescriptorHandle(m_texHands->at(L"textures/rocks_norm.dds").desc));
+
+        // enable the first light in the scene
+        m_effect->SetLightEnabled(0, true);
+        m_effect->SetLightDiffuseColor(0, Colors::White);
+        m_effect->SetLightDirection(0, -Vector3::UnitZ);
+    
+        // instanciate geometric primitive
+        m_shape = GeometricPrimitive::CreateSphere();
+
+        ResourceUploadBatch resourceUpload(device);
+
+        resourceUpload.Begin();
+
+        // Load geometric primitive data into the dedicated video memory for faster performance
+        m_shape->LoadStaticBuffers(device, resourceUpload);
+
+        //Create a future allowing the upload process to potentially happen on another thread, and wait for the upload to comlete before continuing
+        auto uploadResourcesFinished = resourceUpload.End(
+            m_deviceResources->GetCommandQueue()
+        );
+        uploadResourcesFinished.wait();
+    }
+
+    // Create the primitive batch used to render wireframe vertices, which are unlit, and use a different vertex type and effect so need their own batch
+    // TODO: make this code more applicable to switching effects by giving it more in common with the other primitive batch
+    {
+        // Set up wireframe batch
+        m_wireframeBatch = std::make_unique<PrimitiveBatch<WireframeVertexType>>(device);
+
+        // create the pipeline description for the wireframe effect object
+        EffectPipelineStateDescription wpd(
+            &VertexPositionColor::InputLayout,
+            CommonStates::Opaque,
+            CommonStates::DepthDefault,
+            CommonStates::CullNone, //Define CCW winding order
+            rtState,
+            D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE
+        );
+
+        // create the wireframe effect from the above description
+        m_wireframeEffect = std::make_unique<BasicEffect>(device, EffectFlags::VertexColor, wpd);
+    }
+
+>>>>>>> Stashed changes
     // Initialize the sprite batch
     {
         // Create a resource batch to upload the sprite batch. Done seperately to the texture loading as they might happen at seperate times.
@@ -489,6 +698,9 @@ void Game::CreateWindowSizeDependentResources()
 
     auto size = m_deviceResources->GetOutputSize();
 
+    // size the render texture to be the same size as the swapchain
+    m_renderTexture->SetWindow(size);
+
 
     //Initialize Matrices 
     m_view = Matrix::CreateLookAt(
@@ -562,6 +774,8 @@ void Game::OnDeviceLost()
     m_texHands->clear();
     m_textureResources->ReleaseCache();
     m_textureResources.reset();
+    m_renderTexture->ReleaseDevice();
+    m_renderDescriptors.reset();
 
     //Clean up GUI
     ImGui_ImplDX12_Shutdown();

@@ -99,6 +99,7 @@ private:
     enum Descriptors
     {
         Gui,
+        RenderTexture,
         Reserve,
         Count = 128
     };
