@@ -118,6 +118,11 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
 // Windows procedure
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+    // handle Dear Imgui messages to allow for its use in fullscreen/when docked
+    extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+    if (ImGui_ImplWin32_WndProcHandler(hWnd, message, wParam, lParam))
+        return true;
+
     static bool s_in_sizemove = false;
     static bool s_in_suspend = false;
     static bool s_minimized = false;
@@ -223,6 +228,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 game->OnDeactivated();
             }
         }
+        // bind keyboard and mouse to wndprocs
+        Keyboard::ProcessMessage(message, wParam, lParam);
+        Mouse::ProcessMessage(message, wParam, lParam);
         break;
 
     case WM_POWERBROADCAST:
@@ -249,7 +257,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         PostQuitMessage(0);
         break;
 
+        // let dxtk12 keyboard handle keyboard messages
+    case WM_KEYDOWN:
+    case WM_KEYUP:
+    case WM_SYSKEYUP:
+        Keyboard::ProcessMessage(message, wParam, lParam);
+        break;
+
     case WM_SYSKEYDOWN:
+        Keyboard::ProcessMessage(message, wParam, lParam);
+
+
         if (wParam == VK_RETURN && (lParam & 0x60000000) == 0x20000000)
         {
             // Implements the classic ALT+ENTER fullscreen toggle
@@ -285,7 +303,32 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         // A menu is active and the user presses a key that does not correspond
         // to any mnemonic or accelerator key. Ignore so we don't produce an error beep.
         return MAKELRESULT(0, MNC_CLOSE);
+
+        //hand mouse input to dxtk mouse object
+    case WM_ACTIVATE:
+    case WM_INPUT:
+    case WM_MOUSEMOVE:
+    case WM_LBUTTONDOWN:
+    case WM_LBUTTONUP:
+    case WM_RBUTTONDOWN:
+    case WM_RBUTTONUP:
+    case WM_MBUTTONDOWN:
+    case WM_MBUTTONUP:
+    case WM_MOUSEWHEEL:
+    case WM_XBUTTONDOWN:
+    case WM_XBUTTONUP:
+    case WM_MOUSEHOVER:
+        Mouse::ProcessMessage(message, wParam, lParam);
+        break;
+        // avoid accepting input when the window loses focus
+    case WM_MOUSEACTIVATE:
+        // When you click activate the window, we want Mouse to ignore it.
+        return MA_ACTIVATEANDEAT;
+
+
     }
+
+
 
     return DefWindowProc(hWnd, message, wParam, lParam);
 }

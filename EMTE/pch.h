@@ -90,6 +90,7 @@
 #include "PrimitiveBatch.h"
 #include "RenderTargetState.h"
 #include "ResourceUploadBatch.h"
+#include "RenderTexture.h"
 #include "ScreenGrab.h"
 #include "SimpleMath.h"
 #include "SpriteBatch.h"

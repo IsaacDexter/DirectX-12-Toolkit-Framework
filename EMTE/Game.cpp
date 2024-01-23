@@ -81,8 +81,7 @@ void Game::Update(DX::StepTimer const& timer)
     float time = float(m_timer.GetTotalSeconds());
     // TODO: Add your game logic here.
 
-<<<<<<< Updated upstream
-=======
+
     // handle mouse input
     auto mouse = m_mouse->GetState();
 
@@ -135,6 +134,7 @@ void Game::Update(DX::StepTimer const& timer)
         move.y -= 1.f;
 
     Quaternion q = Quaternion::CreateFromYawPitchRoll(m_yaw, 0.f, 0.f);
+
     move = Vector3::Transform(move, q);
     move *= m_movementGain * elapsedTime;
     m_cameraPos += move;
@@ -166,11 +166,12 @@ void Game::Update(DX::StepTimer const& timer)
 
     XMVECTOR lookAt = m_cameraPos + Vector3(x, y, z);
     m_view = XMMatrixLookAtRH(m_cameraPos, lookAt, Vector3::Up);
+
     /*
     char buffer[500];
     sprintf_s(buffer, "\nm_cameraPos = (%f, %f, %f)\nm_cameraLookAt = (%f, %f, %f)", m_cameraPos.x, m_cameraPos.y, m_cameraPos.z, x, y, z);
     OutputDebugStringA(buffer);*/
->>>>>>> Stashed changes
+
 
     //Rotate the light based on elapsed time
     auto quat = Quaternion::CreateFromAxisAngle(Vector3::UnitY, time);
@@ -179,13 +180,14 @@ void Game::Update(DX::StepTimer const& timer)
 
     m_effect->SetLightDirection(0, light);
 
-    m_world = Matrix::CreateRotationY(sinf(time));
+
 
 
     elapsedTime;
 
     PIXEndEvent();
 }
+
 #pragma endregion
 
 #pragma region Frame Render
@@ -258,9 +260,17 @@ void Game::Render()
 
 
     // Render primitives
+    m_effect->SetView(m_view);
+    m_effect->SetProjection(m_proj);
+
+    m_wireframeEffect->SetView(m_view);
+    m_wireframeEffect->SetProjection(m_proj);
+
 
     // Apply wireframe effect
     m_wireframeEffect->SetWorld(m_world);
+    
+
     m_wireframeEffect->Apply(commandList);
 
     m_wireframeBatch->Begin(commandList);
@@ -300,14 +310,18 @@ void Game::Render()
     // apply the basic effect
     // Set matrices
     m_effect->SetWorld(m_world);
+    
+
     m_effect->Apply(commandList);
+
+    m_shape->Draw(commandList);
 
     // Start batch of primitive drawing operations
     m_batch->Begin(commandList);
 
     VertexType v1(Vector3(0.0f, 1.f, 0.f), -Vector3::UnitZ, Vector2(0.5f, 0.f));
-    VertexType v2(Vector3(1.f, -1.f, 0.f), -Vector3::UnitZ, Vector2(1.f, 1.f));
     VertexType v3(Vector3(-1.f, -1.f, 0.f), -Vector3::UnitZ, Vector2(0.f, 1.f));
+    VertexType v2(Vector3(1.f, -1.f, 0.f), -Vector3::UnitZ, Vector2(1.f, 1.f));
 
     m_batch->DrawTriangle(v1, v2, v3);
 
@@ -450,6 +464,19 @@ void Game::CreateDeviceDependentResources()
     auto device = m_deviceResources->GetD3DDevice();
     auto window = m_deviceResources->GetWindow();
 
+    // set up input devices and bind them to the window
+    m_keyboard = std::make_unique<Keyboard>();
+    m_mouse = std::make_unique<Mouse>();
+
+    m_mouse->SetWindow(window);
+    
+    //set up camera variables
+    m_pitch = 0.0f;
+    m_yaw = 0.0f;
+
+    m_cameraPos = m_startPos;
+
+
     // Check Shader Model 6 support
     D3D12_FEATURE_DATA_SHADER_MODEL shaderModel = { D3D_SHADER_MODEL_6_0 };
     if (FAILED(device->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &shaderModel, sizeof(shaderModel)))
@@ -488,8 +515,6 @@ void Game::CreateDeviceDependentResources()
 
     LoadTextures();
 
-<<<<<<< Updated upstream
-=======
     // create render texture, used for the portal
     // Create a render texture of the same size and foramt as the swapchain
     m_renderTexture = std::make_unique<DX::RenderTexture>(m_deviceResources->GetBackBufferFormat());
@@ -577,7 +602,6 @@ void Game::CreateDeviceDependentResources()
         m_wireframeEffect = std::make_unique<BasicEffect>(device, EffectFlags::VertexColor, wpd);
     }
 
->>>>>>> Stashed changes
     // Initialize the sprite batch
     {
         // Create a resource batch to upload the sprite batch. Done seperately to the texture loading as they might happen at seperate times.
@@ -600,66 +624,6 @@ void Game::CreateDeviceDependentResources()
         );
         uploadResourcesFinished.wait();
     }
-
-
-    // Instanciate sprites
-    {
-        // set position of sprite
-        Microsoft::WRL::ComPtr<ID3D12Resource> cat;
-        auto texHand = m_texHands->find(L"textures/cat.dds")->second;
-        //TODO sanitize if the map does not contain this value
-
-        m_textureResources->GetResource(texHand.slot, cat.ReleaseAndGetAddressOf());
-        XMUINT2 catSize = GetTextureSize(cat.Get());
-        m_origin.x = float(catSize.x / 2);
-        m_origin.y = float(catSize.y / 2);
-    }
-
-    // Initialize the primitive batch used for rendering lit objects 
-    {
-        //Set up primitive batch
-        m_batch = std::make_unique<PrimitiveBatch<VertexType>>(device);
-
-        // create the pipeline description for the Normal effect objects
-        EffectPipelineStateDescription ppd(
-            &VertexType::InputLayout,
-            CommonStates::Opaque,
-            CommonStates::DepthDefault,
-            CommonStates::CullCounterClockwise, //Define CCW winding order
-            rtState
-        );
-
-        // create the basiceffect to use the pipeline description and colored vertices
-        m_effect = std::make_unique<NormalMapEffect>(device, EffectFlags::None, ppd);
-        // Set the texture descriptors for this effect
-        m_effect->SetTexture(m_textureResources->GetGpuDescriptorHandle(m_texHands->at(L"textures/rocks_diff.dds").desc), m_states->LinearClamp());
-        m_effect->SetNormalTexture(m_textureResources->GetGpuDescriptorHandle(m_texHands->at(L"textures/rocks_norm.dds").desc));
-
-        // Enable built in, dot product lighting
-        m_effect->EnableDefaultLighting();
-        m_effect->SetLightDiffuseColor(0, Colors::Gray);
-    }
-
-    // Create the primitive batch used to render wireframe vertices, which are unlit, and use a different vertex type and effect so need their own batch
-    // TODO: make this code more applicable to switching effects by giving it more in common with the other primitive batch
-    {
-        // Set up wireframe batch
-        m_wireframeBatch = std::make_unique<PrimitiveBatch<WireframeVertexType>>(device);
-
-        // create the pipeline description for the wireframe effect object
-        EffectPipelineStateDescription wpd(
-            &VertexPositionColor::InputLayout,
-            CommonStates::Opaque,
-            CommonStates::DepthDefault,
-            CommonStates::CullNone, //Define CCW winding order
-            rtState,
-            D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE
-        );
-
-        // create the wireframe effect from the above description
-        m_wireframeEffect = std::make_unique<BasicEffect>(device, EffectFlags::VertexColor, wpd);
-    }
-
 
     //Set up GUI
     {
@@ -697,22 +661,21 @@ void Game::CreateWindowSizeDependentResources()
     m_spriteBatch->SetViewport(viewport);
 
     auto size = m_deviceResources->GetOutputSize();
-
     // size the render texture to be the same size as the swapchain
     m_renderTexture->SetWindow(size);
 
 
     //Initialize Matrices 
     m_view = Matrix::CreateLookAt(
-        Vector3(0.0f, 2.f, 2.f), //Camera position
+        Vector3(m_cameraPos), //Camera position
         Vector3::Zero,  //Camera target
-        Vector3::UnitY  //Camera up vector
+        Vector3::Up  //Camera up vector
     );
     m_proj = Matrix::CreatePerspectiveFieldOfView(
         XM_PI / 4.f,
         float(size.right) / float(size.bottom),
         0.1f,
-        10.f
+        100.f
     );
 
     m_effect->SetView(m_view);
@@ -781,6 +744,8 @@ void Game::OnDeviceLost()
     ImGui_ImplDX12_Shutdown();
     ImGui_ImplWin32_Shutdown();
     ImGui::DestroyContext();
+
+    m_shape.reset();
 }
 
 void Game::OnDeviceRestored()
